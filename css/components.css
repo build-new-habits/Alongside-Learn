@@ -395,3 +395,49 @@
   min-height: var(--touch-target-min);
   padding: 0 var(--space-2);
 }
+
+/* Learner nav tabs */
+#nav-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+  border-bottom: 1px solid var(--color-border);
+}
+.nav-tab {
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  padding: var(--space-3) var(--space-2);
+  min-height: var(--touch-target-min);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-mid);
+  cursor: pointer;
+}
+.nav-tab[aria-current="page"] {
+  color: var(--learn-primary);
+  border-bottom-color: var(--learn-primary);
+}
+
+/* Assignments — learner add form + interactive list */
+.assignment-add-form {
+  margin-bottom: var(--space-6);
+  padding-bottom: var(--space-5);
+  border-bottom: 1px solid var(--color-border);
+}
+.assignment-list-interactive li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+.assignment-list-interactive select {
+  min-height: var(--touch-target-min);
+  padding: var(--space-2) var(--space-3);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-family);
+  font-size: var(--font-size-body-sm);
+  color: var(--text-dark);
+}

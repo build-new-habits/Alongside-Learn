@@ -1,5 +1,5 @@
 // Alongside: Learn — Data store
-// 10 Aug 2026 v5
+// 10 Aug 2026 v6
 // Schema-first discipline (file 07 §4): this file must never read/write a
 // field that isn't documented in Documents/Admin/schema.md.
 //
@@ -93,4 +93,24 @@ export async function fetchRiskSummary(learnerId) {
     .maybeSingle();
   if (error) return null; // fail quiet here — a missing summary isn't an error state
   return data;
+}
+
+// --- Learner assignment writes ------------------------------------------
+// RLS: assignments_learner_all policy (sql/001) already grants the learner
+// full CRUD on their own rows — nothing new needed server-side.
+
+export async function createAssignment({ learnerId, subject, title, dueDate }) {
+  const { error } = await supabase.from('assignments').insert({
+    learner_id: learnerId,
+    subject: subject || null,
+    title,
+    due_date: dueDate || null,
+    status: 'not started',
+  });
+  if (error) throw error;
+}
+
+export async function updateAssignmentStatus(assignmentId, status) {
+  const { error } = await supabase.from('assignments').update({ status }).eq('assignment_id', assignmentId);
+  if (error) throw error;
 }

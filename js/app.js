@@ -8,12 +8,14 @@
 import { getCurrentUser, signIn, signUp, signOut, loadCheckinContext, resendConfirmation } from './auth.js';
 import { renderCheckin } from './checkin.js';
 import { renderParentDashboard } from './parent-dashboard.js';
+import { renderAssignments } from './assignments.js';
 import { renderAlwaysOnResources } from './resources.js';
 import { renderFamilySetup } from './family-setup.js';
 
 const mainContainer = document.getElementById('checkin-root');
 const resourcesContainer = document.getElementById('resources-root');
 const headerContainer = document.getElementById('header-actions');
+const navContainer = document.getElementById('nav-actions');
 
 // SAFETY FIX 10 Aug 2026: resources must be reachable without signing in —
 // someone opening the app while distressed shouldn't have to sign up first.
@@ -25,6 +27,7 @@ async function bootstrap() {
 
   if (!user) {
     if (headerContainer) headerContainer.innerHTML = '';
+    if (navContainer) navContainer.innerHTML = '';
     renderAuthForm(mainContainer);
     return;
   }
@@ -33,6 +36,7 @@ async function bootstrap() {
 
   const ctx = await loadCheckinContext(user.id);
   if (!ctx) {
+    if (navContainer) navContainer.innerHTML = '';
     mainContainer.innerHTML = '';
     const msg = document.createElement('p');
     msg.textContent = "Signed in, but no profile found for this account yet.";
@@ -41,6 +45,7 @@ async function bootstrap() {
   }
 
   if (!ctx.familyId) {
+    if (navContainer) navContainer.innerHTML = '';
     renderFamilySetup(mainContainer, bootstrap);
     return;
   }
@@ -48,10 +53,53 @@ async function bootstrap() {
   // ROUTING FIX 10 Aug 2026: previously always rendered the learner check-in
   // regardless of role — a parent would have incorrectly landed on it.
   if (ctx.role === 'parent') {
+    if (navContainer) navContainer.innerHTML = '';
     renderParentDashboard(mainContainer, ctx);
   } else {
-    renderCheckin(mainContainer, ctx);
+    renderLearnerNav(ctx);
   }
+}
+
+/**
+ * Learner-only nav (Check in / My work). Added 10 Aug 2026 — before this,
+ * a learner had no way to reach anything except the check-in flow; the
+ * assignments view built the same session would have been unreachable.
+ */
+function renderLearnerNav(ctx) {
+  if (!navContainer) {
+    renderCheckin(mainContainer, ctx); // fallback if nav container is missing for any reason
+    return;
+  }
+  navContainer.innerHTML = '';
+
+  const checkinTab = document.createElement('button');
+  checkinTab.type = 'button';
+  checkinTab.className = 'nav-tab';
+  checkinTab.textContent = 'Check in';
+
+  const workTab = document.createElement('button');
+  workTab.type = 'button';
+  workTab.className = 'nav-tab';
+  workTab.textContent = 'My work';
+
+  function setActive(tab) {
+    [checkinTab, workTab].forEach(t => t.setAttribute('aria-current', t === tab ? 'page' : 'false'));
+  }
+
+  checkinTab.addEventListener('click', () => {
+    setActive(checkinTab);
+    renderCheckin(mainContainer, ctx);
+  });
+  workTab.addEventListener('click', () => {
+    setActive(workTab);
+    renderAssignments(mainContainer, ctx);
+  });
+
+  navContainer.appendChild(checkinTab);
+  navContainer.appendChild(workTab);
+
+  setActive(checkinTab);
+  renderCheckin(mainContainer, ctx);
 }
 
 function renderSignOutControl() {
