@@ -122,3 +122,82 @@
   font-size: var(--font-size-body-sm);
   margin-top: var(--space-3);
 }
+
+/* Mood Meter word-picker (Marc Brackett / RULER)
+   10 Aug 2026 v1
+   Deliberately muted per file 01 "quiet over loud" — no bright quadrant
+   colours, and specifically avoids gold/amber tones reserved for the
+   paid-tier signal (file 01 §2). Quadrant is always identified by its
+   plain-language label, never by colour alone (file 01 §9). */
+
+.mood-meter {
+  border: none;
+  padding: 0;
+  margin: 0 0 var(--space-5) 0;
+}
+.mood-meter legend {
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-dark);
+  margin-bottom: var(--space-3);
+  padding: 0;
+}
+.mood-meter-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-3);
+}
+@media (min-width: 480px) {
+  .mood-meter-grid { grid-template-columns: 1fr 1fr; }
+}
+
+.mood-quadrant {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  background: var(--surface-pale);
+}
+.mood-quadrant-label {
+  margin: 0 0 var(--space-2) 0;
+  font-size: var(--font-size-body-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-mid);
+}
+
+.mood-word-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.mood-word-option {
+  min-height: var(--touch-target-min);
+  padding: var(--space-2) var(--space-3);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-white);
+  color: var(--text-dark);
+  font-size: var(--font-size-body-sm);
+  cursor: pointer;
+  transition: border-color var(--duration-card-selection), background-color var(--duration-card-selection);
+}
+.mood-word-option[aria-checked="true"] {
+  border-color: var(--learn-primary);
+  background: var(--learn-primary-light);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Buttons — Secondary, per file 01 §7 */
+.btn-secondary {
+  background: transparent;
+  border: 2px solid var(--learn-primary);
+  color: var(--learn-primary);
+  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-body);
+  padding: var(--space-3) calc(var(--space-6) - 2px);
+  border-radius: var(--radius-lg);
+  min-height: var(--touch-target-min);
+  width: 100%;
+  cursor: pointer;
+  margin-top: var(--space-3);
+}
+.btn-secondary:hover { background: var(--learn-primary-light); }

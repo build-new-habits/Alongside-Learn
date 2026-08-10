@@ -1,15 +1,12 @@
 // Alongside: Learn — Coach shell + learner daily check-in
-// 10 Aug 2026 v1
+// 10 Aug 2026 v2
 // Implements: coach-speaks-first (file 04 §1), free-tier check-in fields,
-// Athena-gated stress/free-text fields, signal-word detection wired to the
-// fixed safeguarding response (file 06 §3).
-//
-// KNOWN GAP, flagged not hidden: this module assumes a signed-in user and
-// takes userId/tier as arguments — Supabase Auth (sign-up/login) is not yet
-// built. That's real next-session work, not silently skipped.
+// Athena-gated stress/free-text fields, Mood Meter word-picker (file 06 §2),
+// and unified safeguarding assessment (js/safeguarding.js).
 
 import { submitCheckin, updateSafeguardingLevel } from './store.js';
-import { scanFreeText, combineWithStress } from './data/signal-words.js';
+import { assessCheckin } from './safeguarding.js';
+import { MOOD_WORDS } from './data/mood-meter.js';
 import {
   checkinGreetings,
   checkinAcknowledgements,
@@ -20,6 +17,7 @@ import {
 const SCALE_LABELS = ['Very low', 'Low', 'Okay', 'Good', 'High'];
 const SLEEP_LABELS = ['Very poor', 'Poor', 'Okay', 'Good', 'Great'];
 const STRESS_LABELS = ['Very low', 'Low', 'Manageable', 'High', 'Overwhelming'];
+const QUADRANT_ORDER = ['yellow', 'green', 'red', 'blue'];
 
 /**
  * Renders the coach shell + check-in flow into a container element.
@@ -29,7 +27,8 @@ const STRESS_LABELS = ['Very low', 'Low', 'Manageable', 'High', 'Overwhelming'];
 export function renderCheckin(container, ctx) {
   const state = {
     energy: null,
-    mood: null,
+    moodQuadrant: null,
+    moodWord: null,
     sleep: null,
     stress: null,
     freeText: '',
@@ -42,7 +41,10 @@ export function renderCheckin(container, ctx) {
   const form = document.createElement('form');
   form.setAttribute('aria-label', 'Daily check-in');
   form.appendChild(tapRow('energy', 'How is your energy right now?', SCALE_LABELS, v => (state.energy = v)));
-  form.appendChild(tapRow('mood', 'How are you feeling in general today?', SCALE_LABELS, v => (state.mood = v)));
+  form.appendChild(moodMeterPicker(ctx.ageBand, (quadrant, word) => {
+    state.moodQuadrant = quadrant;
+    state.moodWord = word;
+  }));
   form.appendChild(tapRow('sleep', 'How did you sleep last night?', SLEEP_LABELS, v => (state.sleep = v)));
 
   if (ctx.tier === 'athena') {
@@ -69,20 +71,21 @@ export function renderCheckin(container, ctx) {
 }
 
 async function handleSubmit(container, ctx, state) {
-  let level = 1;
-
-  if (ctx.tier === 'athena') {
-    const scan = scanFreeText(state.freeText);
-    const combined = combineWithStress(scan, state.stress);
-    level = combined.level;
-  }
+  const { level } = assessCheckin({
+    moodQuadrant: state.moodQuadrant,
+    moodWord: state.moodWord,
+    freeText: ctx.tier === 'athena' ? state.freeText : '',
+    stress: ctx.tier === 'athena' ? state.stress : null,
+    ageBand: ctx.ageBand,
+  });
 
   let savedOk = true;
   try {
     await submitCheckin({
       userId: ctx.userId,
       energy: state.energy,
-      mood: state.mood,
+      moodQuadrant: state.moodQuadrant,
+      moodWord: state.moodWord,
       sleep: state.sleep,
       stress: state.stress,
       freeText: state.freeText || null,
@@ -99,7 +102,7 @@ async function handleSubmit(container, ctx, state) {
   container.innerHTML = '';
 
   if (level >= 2) {
-    container.appendChild(renderSafeguardingResponse(level, ctx.ageBand));
+    container.appendChild(renderSafeguardingResponse(level));
     return;
   }
 
@@ -113,10 +116,9 @@ async function handleSubmit(container, ctx, state) {
   }
 }
 
-function renderSafeguardingResponse(level, ageBand) {
-  // Adult word set exists in file 06 but Learn's primary audience is 13-17
-  // (file 06 §2) — teen copy only implemented this session; adult copy is a
-  // straightforward follow-up once needed for two-parent-household edge cases.
+function renderSafeguardingResponse(level) {
+  // Adult copy not yet written — teen-only this session, matching file 06 §2's
+  // note that the teen word set is primary for Learn's audience.
   const key = level === 3 ? 'teenLevel3' : 'teenLevel2';
   const response = safeguardingResponses[key];
 
@@ -199,6 +201,59 @@ function tapRow(name, question, labels, onChange) {
   return fieldset;
 }
 
+/**
+ * Mood Meter word-picker. Four quadrant sections, one word selectable overall.
+ * Colour is never the sole indicator — each quadrant has a plain-language
+ * label (file 01 §9: colour never the sole means of communicating information).
+ */
+function moodMeterPicker(ageBand, onChange) {
+  const wordSet = MOOD_WORDS[ageBand] ?? MOOD_WORDS.teen;
+
+  const fieldset = document.createElement('fieldset');
+  fieldset.className = 'mood-meter';
+  const legend = document.createElement('legend');
+  legend.textContent = 'How are you feeling in general today?';
+  fieldset.appendChild(legend);
+
+  const group = document.createElement('div');
+  group.setAttribute('role', 'radiogroup');
+  group.setAttribute('aria-label', 'How are you feeling in general today?');
+  group.className = 'mood-meter-grid';
+
+  QUADRANT_ORDER.forEach(quadrant => {
+    const quadrantData = wordSet[quadrant];
+    const section = document.createElement('div');
+    section.className = `mood-quadrant mood-quadrant-${quadrant}`;
+
+    const heading = document.createElement('p');
+    heading.className = 'mood-quadrant-label';
+    heading.textContent = quadrantData.label;
+    section.appendChild(heading);
+
+    const wordWrap = document.createElement('div');
+    wordWrap.className = 'mood-word-wrap';
+    quadrantData.words.forEach(({ word }) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'mood-word-option';
+      btn.textContent = word;
+      btn.setAttribute('role', 'radio');
+      btn.setAttribute('aria-checked', 'false');
+      btn.addEventListener('click', () => {
+        group.querySelectorAll('[role="radio"]').forEach(b => b.setAttribute('aria-checked', 'false'));
+        btn.setAttribute('aria-checked', 'true');
+        onChange(quadrant, word);
+      });
+      wordWrap.appendChild(btn);
+    });
+    section.appendChild(wordWrap);
+    group.appendChild(section);
+  });
+
+  fieldset.appendChild(group);
+  return fieldset;
+}
+
 function freeTextField(onChange) {
   const wrapper = document.createElement('div');
   wrapper.className = 'field';
@@ -235,7 +290,7 @@ function pickGreeting() {
 
 function pickAcknowledgement(state) {
   if (state.stress === 5) return checkinAcknowledgements.stressHigh;
-  if (state.mood <= 2) return checkinAcknowledgements.moodLow;
+  if (state.moodQuadrant === 'blue' || state.moodQuadrant === 'red') return checkinAcknowledgements.moodLow;
   if (state.energy <= 2) return checkinAcknowledgements.energyLow;
   return checkinAcknowledgements.moodOk;
 }

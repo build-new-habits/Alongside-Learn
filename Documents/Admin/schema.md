@@ -1,9 +1,13 @@
 # Alongside: Learn — Schema
-## 10 Aug 2026 v1
+## 10 Aug 2026 v2
 
 Build New Habits Ltd | Confirmed working schema, replacing the scaffold status of Documents/Planning file 05. Written schema-first per file 07 §1/§4: no application file reads a field not documented here. Any change to this file supersedes it with an incremented version — no silent field additions.
 
-**Status: proposal for Graeme's review before first code touches it (file 07 §2, session checklist).** Not yet locked.
+**Status: live in Supabase.** v1 migration (`sql/001_initial_schema.sql`) run and confirmed 10 Aug 2026. v2 changes below applied via `sql/002_mood_meter.sql` — run this before building anything that reads the new mood fields.
+
+**Corrections in v2:**
+- The table documented below as `user` in v1 was actually implemented as `profiles` in the live SQL (`auth.users` already exists as a Supabase built-in, so the app-facing table needed a different name) — this doc now matches reality instead of the other way round.
+- `checkin.mood` (numeric 1–5) is replaced by `mood_quadrant` + `mood_word` — the check-in now uses the real Marc Brackett Mood Meter word-picker (teen-adjusted set), resolving the gap flagged in master_schedule.md v6 between file 06's word-based detection policy and file 04's original numeric-scale spec.
 
 ---
 
@@ -19,10 +23,10 @@ Build New Habits Ltd | Confirmed working schema, replacing the scaffold status o
 | tier | text | `free` \| `athena` — beta families default to `athena` unless stated otherwise, per beta scope |
 | academic_year_start | date | drives phase calculation (see §5) |
 
-### `user`
+### `profiles` (referred to as `user` conceptually in file 05 — renamed to avoid clashing with Supabase's built-in `auth.users`)
 | Field | Type | Notes |
 |---|---|---|
-| user_id | uuid, PK | Supabase auth.users linked |
+| user_id | uuid, PK | FK → `auth.users.id`, cascade delete |
 | family_id | uuid, FK → family | |
 | role | text | `parent` \| `learner` |
 | name | text | |
@@ -32,7 +36,7 @@ Build New Habits Ltd | Confirmed working schema, replacing the scaffold status o
 ### `learner_profile`
 | Field | Type | Notes |
 |---|---|---|
-| user_id | uuid, PK/FK → user | |
+| user_id | uuid, PK/FK → profiles | |
 | subjects | jsonb | subject/topic map |
 | safeguarding_level | int | 1, 2, or 3 — computed, not user-set. Tier-agnostic detection function (file 05 §5) even though triggering fields are currently Athena-only |
 | checkin_streak_shown | bool | always `false` — Learn has no streak mechanic, field exists only to prevent one being added by mistake |
@@ -41,10 +45,11 @@ Build New Habits Ltd | Confirmed working schema, replacing the scaffold status o
 | Field | Type | Notes |
 |---|---|---|
 | checkin_id | uuid, PK | |
-| user_id | uuid, FK → user | |
+| user_id | uuid, FK → profiles | |
 | date | date | |
 | energy | int 1–5 | Free tier |
-| mood | int 1–5 | Free tier |
+| mood_quadrant | text: `yellow`\|`green`\|`red`\|`blue` | Free tier. Mood Meter (Marc Brackett/RULER), see `js/data/mood-meter.js` |
+| mood_word | text | Free tier. The specific word selected within the quadrant; flag severity (`none`/`direct`/`combination`) is derived at read-time from `mood-meter.js`, never stored — same pattern as phase calculation (§3) |
 | sleep | int 1–5 | Free tier |
 | stress | int 1–5, nullable | Athena only |
 | free_text | text, nullable, max 200 chars | Athena only. **Subject to signal-word scan (file 04 §3). Journal Privacy Rule: this field only — never extended to any future journal feature without an explicit documented decision.** |
@@ -54,14 +59,14 @@ Build New Habits Ltd | Confirmed working schema, replacing the scaffold status o
 ### `parent_profile`
 | Field | Type | Notes |
 |---|---|---|
-| user_id | uuid, PK/FK → user | |
+| user_id | uuid, PK/FK → profiles | |
 | notification_prefs | jsonb | |
 
 ### `parent_checkin`
 | Field | Type | Notes |
 |---|---|---|
 | checkin_id | uuid, PK | |
-| user_id | uuid, FK → user (parent) | **Private to this parent — RLS must never allow the co-parent to read this row.** |
+| user_id | uuid, FK → profiles (parent) | **Private to this parent — RLS must never allow the co-parent to read this row.** |
 | response | jsonb | |
 | date | date | |
 
@@ -69,7 +74,7 @@ Build New Habits Ltd | Confirmed working schema, replacing the scaffold status o
 | Field | Type | Notes |
 |---|---|---|
 | assignment_id | uuid, PK | |
-| learner_id | uuid, FK → user | |
+| learner_id | uuid, FK → profiles | |
 | subject | text | |
 | title | text | |
 | due_date | date | |
@@ -80,7 +85,7 @@ Build New Habits Ltd | Confirmed working schema, replacing the scaffold status o
 | Field | Type | Notes |
 |---|---|---|
 | card_id | uuid, PK | |
-| learner_id | uuid, FK → user | |
+| learner_id | uuid, FK → profiles | |
 | subject | text | |
 | topic | text | |
 | question | text | |
@@ -92,7 +97,7 @@ Build New Habits Ltd | Confirmed working schema, replacing the scaffold status o
 | Field | Type | Notes |
 |---|---|---|
 | entry_id | uuid, PK | |
-| learner_id | uuid, FK → user | Athena only feature |
+| learner_id | uuid, FK → profiles | Athena only feature |
 | subject | text | |
 | scheduled_at | timestamptz | |
 | coach_generated | bool | |
@@ -100,7 +105,7 @@ Build New Habits Ltd | Confirmed working schema, replacing the scaffold status o
 ### `risk_matrix`
 | Field | Type | Notes |
 |---|---|---|
-| learner_id | uuid, PK/FK → user | Athena only |
+| learner_id | uuid, PK/FK → profiles | Athena only |
 | subject_confidence | jsonb | per-subject, post-mock |
 | parent_facing_summary | text | synthesised only — **raw scores never exposed to parent, enforce at query level, not just UI** (file 04 §7) |
 
@@ -108,7 +113,7 @@ Build New Habits Ltd | Confirmed working schema, replacing the scaffold status o
 | Field | Type | Notes |
 |---|---|---|
 | log_id | uuid, PK | |
-| user_id | uuid, FK → user | |
+| user_id | uuid, FK → profiles | |
 | type | text | |
 | sent_at | timestamptz | |
 | consented_by_learner | bool | required true for any parent-facing message about a learner (file 04 §4 consent rule) |

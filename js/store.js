@@ -1,5 +1,5 @@
 // Alongside: Learn — Data store
-// 10 Aug 2026 v3
+// 10 Aug 2026 v4
 // Schema-first discipline (file 07 §4): this file must never read/write a
 // field that isn't documented in Documents/Admin/schema.md.
 //
@@ -19,12 +19,13 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
  * only sent if provided (Athena-gated per file 04 §2, nullable in schema).
  * Returns the inserted row, or throws — caller handles UI error state.
  */
-export async function submitCheckin({ userId, energy, mood, sleep, stress, freeText, subjectFocus }) {
+export async function submitCheckin({ userId, energy, moodQuadrant, moodWord, sleep, stress, freeText, subjectFocus }) {
   const payload = {
     user_id: userId,
     date: new Date().toISOString().slice(0, 10),
     energy,
-    mood,
+    mood_quadrant: moodQuadrant,
+    mood_word: moodWord,
     sleep,
     stress: stress ?? null,
     free_text: freeText ?? null,
