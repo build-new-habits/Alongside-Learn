@@ -1,5 +1,5 @@
 // Alongside: Learn — Data store
-// 10 Aug 2026 v6
+// 10 Aug 2026 v7
 // Schema-first discipline (file 07 §4): this file must never read/write a
 // field that isn't documented in Documents/Admin/schema.md.
 //
@@ -112,5 +112,76 @@ export async function createAssignment({ learnerId, subject, title, dueDate }) {
 
 export async function updateAssignmentStatus(assignmentId, status) {
   const { error } = await supabase.from('assignments').update({ status }).eq('assignment_id', assignmentId);
+  if (error) throw error;
+}
+
+// --- Flashcards -----------------------------------------------------------
+// RLS: flashcards_learner_all policy (sql/001) grants the learner full CRUD
+// on their own rows. next_review_date is the only spacing data stored —
+// interval is derived at review time, not stored, matching the "derived not
+// stored" pattern already used for phase calculation (schema.md §3).
+
+export async function createFlashcard({ learnerId, subject, topic, question, answer }) {
+  const today = new Date().toISOString().slice(0, 10);
+  const { error } = await supabase.from('flashcards').insert({
+    learner_id: learnerId,
+    subject: subject || null,
+    topic: topic || null,
+    question,
+    answer,
+    next_review_date: today,
+    coach_suggested: false,
+  });
+  if (error) throw error;
+}
+
+export async function fetchAllFlashcards(learnerId) {
+  const { data, error } = await supabase
+    .from('flashcards')
+    .select('*')
+    .eq('learner_id', learnerId)
+    .order('next_review_date', { ascending: true });
+  if (error) throw error;
+  return data;
+}
+
+export async function fetchDueFlashcards(learnerId) {
+  const today = new Date().toISOString().slice(0, 10);
+  const { data, error } = await supabase
+    .from('flashcards')
+    .select('*')
+    .eq('learner_id', learnerId)
+    .lte('next_review_date', today)
+    .order('next_review_date', { ascending: true });
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Simple spaced-repetition step. No interval is stored — derived from the gap
+ * between the card's last scheduled date and today. Correct doubles that gap
+ * (min 1 day, capped at 30); incorrect resets to 1 day. A real algorithm
+ * (SM-2 or similar) is a reasonable future improvement, not needed for beta.
+ */
+export async function reviewFlashcard(card, wasCorrect) {
+  const today = new Date();
+  const todayStr = today.toISOString().slice(0, 10);
+  let nextDate;
+
+  if (!wasCorrect) {
+    nextDate = new Date(today);
+    nextDate.setDate(nextDate.getDate() + 1);
+  } else {
+    const lastScheduled = new Date(card.next_review_date);
+    const gapDays = Math.max(1, Math.round((today - lastScheduled) / (1000 * 60 * 60 * 24)));
+    const nextGap = Math.min(30, Math.max(1, gapDays * 2));
+    nextDate = new Date(today);
+    nextDate.setDate(nextDate.getDate() + nextGap);
+  }
+
+  const { error } = await supabase
+    .from('flashcards')
+    .update({ next_review_date: nextDate.toISOString().slice(0, 10) })
+    .eq('card_id', card.card_id);
   if (error) throw error;
 }

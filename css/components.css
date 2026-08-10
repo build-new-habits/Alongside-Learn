@@ -441,3 +441,28 @@
   font-size: var(--font-size-body-sm);
   color: var(--text-dark);
 }
+
+/* Flashcard review */
+.flashcard-review {
+  margin-bottom: var(--space-6);
+}
+.flashcard-question {
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-semibold);
+  margin: 0 0 var(--space-4) 0;
+}
+.flashcard-answer {
+  font-size: var(--font-size-body-lg);
+  color: var(--learn-primary);
+  margin: 0 0 var(--space-4) 0;
+  padding: var(--space-3);
+  background: var(--learn-primary-light);
+  border-radius: var(--radius-md);
+}
+.flashcard-review-btns {
+  display: flex;
+  gap: var(--space-3);
+}
+.flashcard-review-btns button {
+  flex: 1;
+}
