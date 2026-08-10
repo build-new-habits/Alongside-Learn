@@ -1,30 +1,37 @@
 // Alongside: Learn — Coach shell + learner daily check-in
-// 10 Aug 2026 v2
-// Implements: coach-speaks-first (file 04 §1), free-tier check-in fields,
-// Athena-gated stress/free-text fields, Mood Meter word-picker (file 06 §2),
-// and unified safeguarding assessment (js/safeguarding.js).
+// 10 Aug 2026 v3
+// Reworked to a conversational, message-by-message flow per Graeme's
+// direction: feels like a chat rather than a form, and the mood word list is
+// "unlocked" by two simple questions (energy, then good/hard) rather than
+// showing all four Mood Meter quadrants at once. This is also closer to how
+// the Mood Meter is actually taught (RULER: energy axis, then pleasantness
+// axis, then the specific word) — not a deviation from it.
 
 import { submitCheckin, updateSafeguardingLevel } from './store.js';
 import { assessCheckin } from './safeguarding.js';
-import { MOOD_WORDS } from './data/mood-meter.js';
+import { MOOD_WORDS, determineQuadrant, energyToTier } from './data/mood-meter.js';
 import {
   checkinGreetings,
   checkinAcknowledgements,
   safeguardingResponses,
-  alwaysOnResources,
 } from './data/coach-voice.js';
+import { renderAlwaysOnResources } from './resources.js';
 
-const SCALE_LABELS = ['Very low', 'Low', 'Okay', 'Good', 'High'];
+const ENERGY_LABELS = ['Very low', 'Low', 'Okay', 'Good', 'High'];
 const SLEEP_LABELS = ['Very poor', 'Poor', 'Okay', 'Good', 'Great'];
 const STRESS_LABELS = ['Very low', 'Low', 'Manageable', 'High', 'Overwhelming'];
-const QUADRANT_ORDER = ['yellow', 'green', 'red', 'blue'];
 
 /**
- * Renders the coach shell + check-in flow into a container element.
  * @param {HTMLElement} container
  * @param {{ userId: string, tier: 'free'|'athena', ageBand: 'teen'|'adult' }} ctx
  */
 export function renderCheckin(container, ctx) {
+  container.innerHTML = '';
+  const chatLog = document.createElement('div');
+  chatLog.className = 'chat-log';
+  chatLog.setAttribute('aria-live', 'polite');
+  container.appendChild(chatLog);
+
   const state = {
     energy: null,
     moodQuadrant: null,
@@ -35,42 +42,78 @@ export function renderCheckin(container, ctx) {
     subjectFocus: '',
   };
 
-  container.innerHTML = '';
-  container.appendChild(coachMessage(pickGreeting()));
-
-  const form = document.createElement('form');
-  form.setAttribute('aria-label', 'Daily check-in');
-  form.appendChild(tapRow('energy', 'How is your energy right now?', SCALE_LABELS, v => (state.energy = v)));
-  form.appendChild(moodMeterPicker(ctx.ageBand, (quadrant, word) => {
-    state.moodQuadrant = quadrant;
-    state.moodWord = word;
-  }));
-  form.appendChild(tapRow('sleep', 'How did you sleep last night?', SLEEP_LABELS, v => (state.sleep = v)));
-
-  if (ctx.tier === 'athena') {
-    form.appendChild(
-      tapRow('stress', 'How stressed are you feeling about your studies right now?', STRESS_LABELS, v => (state.stress = v))
-    );
-    form.appendChild(freeTextField(v => (state.freeText = v)));
-  }
-
-  form.appendChild(subjectField(v => (state.subjectFocus = v)));
-
-  const submitBtn = document.createElement('button');
-  submitBtn.type = 'submit';
-  submitBtn.className = 'btn-primary';
-  submitBtn.textContent = 'Check in';
-  form.appendChild(submitBtn);
-
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    await handleSubmit(container, ctx, state);
-  });
-
-  container.appendChild(form);
+  appendCoachBubble(chatLog, pickGreeting());
+  askEnergy(chatLog, ctx, state);
 }
 
-async function handleSubmit(container, ctx, state) {
+// --- Conversation steps, one leading into the next ------------------------
+
+function askEnergy(chatLog, ctx, state) {
+  appendCoachBubble(chatLog, 'How is your energy right now?');
+  appendOptions(chatLog, ENERGY_LABELS.map((label, i) => ({ label, value: i + 1 })), (value, label) => {
+    state.energy = value;
+    askValence(chatLog, ctx, state);
+  });
+}
+
+function askValence(chatLog, ctx, state) {
+  appendCoachBubble(chatLog, 'And does today feel more good, or more hard?');
+  appendOptions(chatLog, [{ label: 'More good', value: 'good' }, { label: 'More hard', value: 'hard' }], (value, label) => {
+    state.valence = value;
+    askMoodWord(chatLog, ctx, state);
+  });
+}
+
+function askMoodWord(chatLog, ctx, state) {
+  const quadrant = determineQuadrant(energyToTier(state.energy), state.valence);
+  state.moodQuadrant = quadrant;
+  const wordSet = MOOD_WORDS[ctx.ageBand] ?? MOOD_WORDS.teen;
+  const words = wordSet[quadrant].words.map(w => ({ label: w.word, value: w.word }));
+
+  appendCoachBubble(chatLog, 'Which of these feels closest?');
+  appendOptions(chatLog, words, (value, label) => {
+    state.moodWord = value;
+    askSleep(chatLog, ctx, state);
+  });
+}
+
+function askSleep(chatLog, ctx, state) {
+  appendCoachBubble(chatLog, 'How did you sleep last night?');
+  appendOptions(chatLog, SLEEP_LABELS.map((label, i) => ({ label, value: i + 1 })), (value) => {
+    state.sleep = value;
+    if (ctx.tier === 'athena') {
+      askStress(chatLog, ctx, state);
+    } else {
+      askSubjectFocus(chatLog, ctx, state);
+    }
+  });
+}
+
+function askStress(chatLog, ctx, state) {
+  appendCoachBubble(chatLog, 'How stressed are you feeling about your studies right now?');
+  appendOptions(chatLog, STRESS_LABELS.map((label, i) => ({ label, value: i + 1 })), (value) => {
+    state.stress = value;
+    askFreeText(chatLog, ctx, state);
+  });
+}
+
+function askFreeText(chatLog, ctx, state) {
+  appendCoachBubble(chatLog, 'Anything specific on your mind today? Totally optional.');
+  appendTextInput(chatLog, { multiline: true, maxLength: 200, skippable: true }, (value) => {
+    state.freeText = value;
+    askSubjectFocus(chatLog, ctx, state);
+  });
+}
+
+function askSubjectFocus(chatLog, ctx, state) {
+  appendCoachBubble(chatLog, 'What subject are you planning to focus on today? Optional too.');
+  appendTextInput(chatLog, { multiline: false, skippable: true }, (value) => {
+    state.subjectFocus = value;
+    finishCheckin(chatLog, ctx, state);
+  });
+}
+
+async function finishCheckin(chatLog, ctx, state) {
   const { level } = assessCheckin({
     moodQuadrant: state.moodQuadrant,
     moodWord: state.moodWord,
@@ -99,189 +142,116 @@ async function handleSubmit(container, ctx, state) {
     console.error('Check-in save failed', err);
   }
 
-  container.innerHTML = '';
-
   if (level >= 2) {
-    container.appendChild(renderSafeguardingResponse(level));
-    return;
+    const key = level === 3 ? 'teenLevel3' : 'teenLevel2';
+    const response = safeguardingResponses[key];
+    appendCoachBubble(chatLog, response.message);
+    renderAlwaysOnResources(chatLog, { heading: null, resources: response.resources });
+  } else {
+    appendCoachBubble(chatLog, pickAcknowledgement(state));
   }
 
-  container.appendChild(coachMessage(pickAcknowledgement(state)));
   if (!savedOk) {
     const warning = document.createElement('p');
     warning.className = 'checkin-error';
     warning.setAttribute('role', 'alert');
     warning.textContent = "That didn't save properly — please try checking in again.";
-    container.appendChild(warning);
+    chatLog.appendChild(warning);
   }
+
+  // Reflection close, every time — not just when flagged (Graeme's direction
+  // 10 Aug 2026: keep support resources visible as a normal part of finishing
+  // a check-in, not something that only appears when something's wrong).
+  appendCoachBubble(chatLog, "Before you go — these are always here if you ever want to talk to someone:");
+  renderAlwaysOnResources(chatLog);
 }
 
-function renderSafeguardingResponse(level) {
-  // Adult copy not yet written — teen-only this session, matching file 06 §2's
-  // note that the teen word set is primary for Learn's audience.
-  const key = level === 3 ? 'teenLevel3' : 'teenLevel2';
-  const response = safeguardingResponses[key];
+// --- Chat-bubble UI primitives ---------------------------------------------
 
-  const wrapper = document.createElement('div');
-  wrapper.className = 'coach-card safeguarding-card';
-  wrapper.setAttribute('role', 'alert');
-
-  const msg = document.createElement('p');
-  msg.textContent = response.message;
-  wrapper.appendChild(msg);
-
-  const list = document.createElement('ul');
-  list.className = 'resource-list';
-  response.resources.forEach(r => {
-    const li = document.createElement('li');
-    li.innerHTML = `<strong>${r.name}</strong> — ${r.detail}`;
-    list.appendChild(li);
-  });
-  wrapper.appendChild(list);
-
-  return wrapper;
+function appendCoachBubble(chatLog, text) {
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble bubble-coach';
+  bubble.setAttribute('role', 'status');
+  bubble.textContent = text;
+  chatLog.appendChild(bubble);
+  bubble.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  return bubble;
 }
 
-/** Always-visible in-app resources — not push-notified, always reachable (file 04 §5) */
-export function renderAlwaysOnResources(container) {
-  const section = document.createElement('section');
-  section.setAttribute('aria-label', 'Support resources');
-  const h = document.createElement('h3');
-  h.textContent = 'Need to talk to someone?';
-  section.appendChild(h);
-  const list = document.createElement('ul');
-  list.className = 'resource-list';
-  alwaysOnResources.forEach(r => {
-    const li = document.createElement('li');
-    li.innerHTML = `<strong>${r.name}</strong> — ${r.detail}`;
-    list.appendChild(li);
-  });
-  section.appendChild(list);
-  container.appendChild(section);
-}
-
-// --- UI building blocks -----------------------------------------------
-
-function coachMessage(text) {
-  const div = document.createElement('div');
-  div.className = 'coach-card';
-  div.setAttribute('role', 'status');
-  div.textContent = text;
-  return div;
-}
-
-function tapRow(name, question, labels, onChange) {
-  const fieldset = document.createElement('fieldset');
-  fieldset.className = 'tap-row';
-  const legend = document.createElement('legend');
-  legend.textContent = question;
-  fieldset.appendChild(legend);
-
-  const group = document.createElement('div');
-  group.setAttribute('role', 'radiogroup');
-  group.setAttribute('aria-label', question);
-
-  labels.forEach((label, i) => {
-    const value = i + 1;
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'tap-row-option';
-    btn.textContent = label;
-    btn.setAttribute('role', 'radio');
-    btn.setAttribute('aria-checked', 'false');
-    btn.addEventListener('click', () => {
-      group.querySelectorAll('[role="radio"]').forEach(b => b.setAttribute('aria-checked', 'false'));
-      btn.setAttribute('aria-checked', 'true');
-      onChange(value);
-    });
-    group.appendChild(btn);
-  });
-
-  fieldset.appendChild(group);
-  return fieldset;
+function appendUserBubble(chatLog, text) {
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble bubble-user';
+  bubble.textContent = text;
+  chatLog.appendChild(bubble);
+  bubble.scrollIntoView({ behavior: 'smooth', block: 'end' });
 }
 
 /**
- * Mood Meter word-picker. Four quadrant sections, one word selectable overall.
- * Colour is never the sole indicator — each quadrant has a plain-language
- * label (file 01 §9: colour never the sole means of communicating information).
+ * Renders a row of answer-option buttons after the most recent coach bubble.
+ * Once one is picked, the options are replaced with a user-style bubble
+ * showing what was chosen, and onSelect fires to continue the flow.
  */
-function moodMeterPicker(ageBand, onChange) {
-  const wordSet = MOOD_WORDS[ageBand] ?? MOOD_WORDS.teen;
+function appendOptions(chatLog, options, onSelect) {
+  const wrap = document.createElement('div');
+  wrap.className = 'answer-options';
+  wrap.setAttribute('role', 'group');
 
-  const fieldset = document.createElement('fieldset');
-  fieldset.className = 'mood-meter';
-  const legend = document.createElement('legend');
-  legend.textContent = 'How are you feeling in general today?';
-  fieldset.appendChild(legend);
-
-  const group = document.createElement('div');
-  group.setAttribute('role', 'radiogroup');
-  group.setAttribute('aria-label', 'How are you feeling in general today?');
-  group.className = 'mood-meter-grid';
-
-  QUADRANT_ORDER.forEach(quadrant => {
-    const quadrantData = wordSet[quadrant];
-    const section = document.createElement('div');
-    section.className = `mood-quadrant mood-quadrant-${quadrant}`;
-
-    const heading = document.createElement('p');
-    heading.className = 'mood-quadrant-label';
-    heading.textContent = quadrantData.label;
-    section.appendChild(heading);
-
-    const wordWrap = document.createElement('div');
-    wordWrap.className = 'mood-word-wrap';
-    quadrantData.words.forEach(({ word }) => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'mood-word-option';
-      btn.textContent = word;
-      btn.setAttribute('role', 'radio');
-      btn.setAttribute('aria-checked', 'false');
-      btn.addEventListener('click', () => {
-        group.querySelectorAll('[role="radio"]').forEach(b => b.setAttribute('aria-checked', 'false'));
-        btn.setAttribute('aria-checked', 'true');
-        onChange(quadrant, word);
-      });
-      wordWrap.appendChild(btn);
+  options.forEach(({ label, value }) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'answer-option-btn';
+    btn.textContent = label;
+    btn.addEventListener('click', () => {
+      wrap.remove();
+      appendUserBubble(chatLog, label);
+      onSelect(value, label);
     });
-    section.appendChild(wordWrap);
-    group.appendChild(section);
+    wrap.appendChild(btn);
   });
 
-  fieldset.appendChild(group);
-  return fieldset;
+  chatLog.appendChild(wrap);
+  wrap.scrollIntoView({ behavior: 'smooth', block: 'end' });
 }
 
-function freeTextField(onChange) {
-  const wrapper = document.createElement('div');
-  wrapper.className = 'field';
-  const label = document.createElement('label');
-  label.htmlFor = 'checkin-freetext';
-  label.textContent = 'Anything specific on your mind today? (optional)';
-  const textarea = document.createElement('textarea');
-  textarea.id = 'checkin-freetext';
-  textarea.maxLength = 200;
-  textarea.addEventListener('input', e => onChange(e.target.value));
-  wrapper.appendChild(label);
-  wrapper.appendChild(textarea);
-  return wrapper;
-}
+function appendTextInput(chatLog, { multiline, maxLength, skippable }, onSubmit) {
+  const wrap = document.createElement('div');
+  wrap.className = 'answer-text-input';
 
-function subjectField(onChange) {
-  const wrapper = document.createElement('div');
-  wrapper.className = 'field';
-  const label = document.createElement('label');
-  label.htmlFor = 'checkin-subject';
-  label.textContent = 'What subject are you planning to focus on today? (optional)';
-  const input = document.createElement('input');
-  input.type = 'text';
-  input.id = 'checkin-subject';
-  input.addEventListener('input', e => onChange(e.target.value));
-  wrapper.appendChild(label);
-  wrapper.appendChild(input);
-  return wrapper;
+  const input = multiline ? document.createElement('textarea') : document.createElement('input');
+  if (!multiline) input.type = 'text';
+  if (maxLength) input.maxLength = maxLength;
+  input.setAttribute('aria-label', 'Your answer');
+  wrap.appendChild(input);
+
+  const btnRow = document.createElement('div');
+  btnRow.className = 'answer-text-btn-row';
+
+  const sendBtn = document.createElement('button');
+  sendBtn.type = 'button';
+  sendBtn.className = 'answer-option-btn';
+  sendBtn.textContent = 'Send';
+  sendBtn.addEventListener('click', () => submit(input.value.trim()));
+  btnRow.appendChild(sendBtn);
+
+  if (skippable) {
+    const skipBtn = document.createElement('button');
+    skipBtn.type = 'button';
+    skipBtn.className = 'answer-option-btn answer-option-skip';
+    skipBtn.textContent = 'Skip';
+    skipBtn.addEventListener('click', () => submit(''));
+    btnRow.appendChild(skipBtn);
+  }
+
+  wrap.appendChild(btnRow);
+  chatLog.appendChild(wrap);
+  wrap.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  input.focus();
+
+  function submit(value) {
+    wrap.remove();
+    appendUserBubble(chatLog, value || '(skipped)');
+    onSubmit(value);
+  }
 }
 
 function pickGreeting() {

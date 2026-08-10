@@ -87,3 +87,25 @@ export function getMoodFlag(ageBand, quadrant, word) {
   const entry = set[quadrant]?.words.find(w => w.word === word);
   return entry ? entry.flag : 'none';
 }
+
+/**
+ * Determines the Mood Meter quadrant from two simple signals, so the person
+ * only ever sees ONE quadrant's word list (4-9 words) rather than all four
+ * at once (20+ words) — added 10 Aug 2026 per Graeme's UX direction: "score
+ * unlocks the words" is also how the Mood Meter is actually taught (RULER
+ * places you on the energy axis, then the pleasantness axis, before you
+ * pick a specific word).
+ * @param {'high'|'low'} energyTier
+ * @param {'good'|'hard'} valenceTier
+ */
+export function determineQuadrant(energyTier, valenceTier) {
+  if (energyTier === 'high' && valenceTier === 'good') return 'yellow';
+  if (energyTier === 'high' && valenceTier === 'hard') return 'red';
+  if (energyTier === 'low' && valenceTier === 'good') return 'green';
+  return 'blue';
+}
+
+/** Existing 5-point energy scale bucketed into the Mood Meter's high/low axis. */
+export function energyToTier(energyLevel) {
+  return energyLevel >= 4 ? 'high' : 'low';
+}

@@ -6,11 +6,17 @@
 // signed in, renders a minimal sign-up/login form.
 
 import { getCurrentUser, signIn, signUp, loadCheckinContext, resendConfirmation } from './auth.js';
-import { renderCheckin, renderAlwaysOnResources } from './checkin.js';
+import { renderCheckin } from './checkin.js';
+import { renderAlwaysOnResources } from './resources.js';
 import { renderFamilySetup } from './family-setup.js';
 
 const mainContainer = document.getElementById('checkin-root');
 const resourcesContainer = document.getElementById('resources-root');
+
+// SAFETY FIX 10 Aug 2026: resources must be reachable without signing in —
+// someone opening the app while distressed shouldn't have to sign up first.
+// Rendered immediately, unconditionally, not tied to the auth/check-in flow.
+if (resourcesContainer) renderAlwaysOnResources(resourcesContainer, { heading: null });
 
 async function bootstrap() {
   const user = await getCurrentUser();
@@ -35,7 +41,6 @@ async function bootstrap() {
   }
 
   renderCheckin(mainContainer, ctx);
-  if (resourcesContainer) renderAlwaysOnResources(resourcesContainer);
 }
 
 function renderAuthForm(container) {

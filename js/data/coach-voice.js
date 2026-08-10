@@ -64,4 +64,8 @@ export const alwaysOnResources = [
   { name: 'Childline', detail: '0800 1111 · childline.org.uk' },
   { name: 'Shout', detail: 'Text 85258 · giveusashout.org' },
   { name: 'Samaritans', detail: '116 123 · samaritans.org' },
+  {
+    name: 'Kooth',
+    detail: 'kooth.com — free online counselling and chat with a real practitioner. Availability depends on where you live (locally commissioned, not everywhere in the UK yet) — check the website.',
+  },
 ];

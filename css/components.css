@@ -237,3 +237,121 @@
   margin-right: var(--space-2);
   vertical-align: middle;
 }
+
+/* Conversational check-in — chat-bubble style
+   10 Aug 2026 v1
+   Added per Graeme's direction: feel like a conversation, not a form. */
+
+.chat-log {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+
+.bubble {
+  max-width: 85%;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-body);
+  line-height: 1.5;
+}
+.bubble-coach {
+  align-self: flex-start;
+  background: var(--surface-pale);
+  border: 1px solid var(--color-border);
+  color: var(--text-dark);
+  border-bottom-left-radius: var(--radius-sm);
+}
+.bubble-user {
+  align-self: flex-end;
+  background: var(--learn-primary);
+  color: var(--color-white);
+  border-bottom-right-radius: var(--radius-sm);
+}
+
+.answer-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-self: flex-start;
+  max-width: 100%;
+}
+.answer-option-btn {
+  min-height: var(--touch-target-min);
+  padding: var(--space-2) var(--space-4);
+  border: 2px solid var(--learn-primary);
+  border-radius: var(--radius-full);
+  background: var(--color-white);
+  color: var(--learn-primary);
+  font-size: var(--font-size-body-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: background-color var(--duration-button-state);
+}
+.answer-option-btn:hover {
+  background: var(--learn-primary-light);
+}
+.answer-option-skip {
+  border-color: var(--color-border);
+  color: var(--text-mid);
+}
+
+.answer-text-input {
+  align-self: flex-start;
+  width: 100%;
+  max-width: 85%;
+}
+.answer-text-input textarea,
+.answer-text-input input[type="text"] {
+  width: 100%;
+  font-family: var(--font-family);
+  font-size: var(--font-size-body);
+  padding: var(--space-3);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--text-dark);
+  margin-bottom: var(--space-2);
+}
+.answer-text-input textarea:focus,
+.answer-text-input input[type="text"]:focus {
+  border-color: var(--learn-primary);
+}
+.answer-text-input textarea { min-height: 70px; resize: vertical; }
+.answer-text-btn-row {
+  display: flex;
+  gap: var(--space-2);
+}
+.answer-text-btn-row .answer-option-btn {
+  flex: 0 0 auto;
+}
+
+.resource-section {
+  margin-top: var(--space-4);
+}
+.resource-section h3 {
+  font-size: var(--font-size-body);
+  color: var(--text-mid);
+  margin-bottom: var(--space-2);
+}
+
+/* Always-reachable support disclosure — collapsed by default so it doesn't
+   compete with the chat, but present on every screen without needing to
+   sign in first (safety requirement, not just styling). */
+#resources-details {
+  margin-bottom: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+}
+#resources-details summary {
+  cursor: pointer;
+  font-weight: var(--font-weight-medium);
+  color: var(--learn-primary);
+  min-height: var(--touch-target-min);
+  display: flex;
+  align-items: center;
+}
+#resources-details[open] summary {
+  margin-bottom: var(--space-2);
+}
