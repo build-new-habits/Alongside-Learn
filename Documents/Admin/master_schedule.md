@@ -1,5 +1,5 @@
 # Alongside: Learn — Master Schedule
-## 10 Aug 2026 v6
+## 10 Aug 2026 v7
 
 Build New Habits Ltd | Single source of truth for all Learn build, business, content, and safeguarding/legal tasks. Read in full at the start of every session (file 07, Section 3). Updated at the close of every session.
 
@@ -11,71 +11,64 @@ Build New Habits Ltd | Single source of truth for all Learn build, business, con
 |---|---|
 | Target date | 1 Sept 2026 |
 | Launch scope | Private beta — trusted families only |
-| Stack | Vanilla JS PWA, GitHub Pages, Supabase (Frankfurt, live, RLS confirmed on all 10 tables) |
-| Coach shell + check-in | **Built.** Coach-speaks-first, free-tier fields (energy/mood/sleep/subject), Athena-gated fields (stress/free text), signal-word safeguarding detection wired and writing to `checkins` + `learner_profiles.safeguarding_level`. |
-| Safeguarding reviewers | Graeme (self, 20+ yrs trained) — ongoing. Solicitor — TBC. School DSL friend — TBC. |
+| Stack | Vanilla JS PWA, Supabase (Frankfurt, RLS confirmed) |
+| Mood Meter | **Built.** Real Marc Brackett word-picker, teen-adjusted set as default, adult set included. Resolves the v6 gap — Learn's detection method now matches the shared family policy's word-based mechanism instead of diverging from it. |
+| Safeguarding assessment | Unified across mood word + free text + stress in `js/safeguarding.js`. Functional, not yet reviewed. |
+| Auth | **Built.** Sign-up/login/logout via Supabase Auth, creates a `profiles` row. |
+| Safeguarding reviewers | Graeme (self) — ongoing. Solicitor — TBC. School DSL friend — TBC. |
 | Pricing | Deferred to pre-public-launch. |
 
 ---
 
-## 1. Decisions log
+## 1. Action needed from Graeme — right now
 
-| # | Decision | Status |
-|---|---|---|
-| 1–7 | (unchanged — see v5) | |
-| 8 | Coach shell + check-in flow built, safeguarding detection wired | Done 10 Aug |
+**Run `sql/002_mood_meter.sql`** in the Supabase SQL Editor — same process as before (SQL Editor → New query → paste → Run). It replaces the old numeric `mood` column with `mood_quadrant` + `mood_word`. Safe to run any time, no live data exists yet. Sanity check included in the file's comments.
 
----
-
-## 2. Gap surfaced during today's build — needs Graeme's read
-
-**File 06 (shared crisis policy) describes a Yale Mood Meter word-picker as the detection input — Learn's actual check-in (file 04) doesn't have one.** Learn's mood/energy/sleep/stress are 5-point tap-row scales, not a word-selection grid. Only the free-text field is word-based.
-
-What I built reflects Learn's real check-in structure: the free-text vocabulary scan (file 04 §3) is implemented and wired to a fixed safeguarding response. The mood-meter quadrant/combination-word system from file 06 (trapped, overwhelmed, etc. as selectable words) is **not** implemented, because there's no matching input in Learn's UI to apply it to.
-
-**This needs one of two resolutions, and it's squarely a safeguarding-reviewer-and-you decision, not a build one:**
-- (a) Add a word-picker input to Learn's check-in to match the shared family policy, or
-- (b) Formally document that Learn's detection method differs from Move's and is free-text-vocabulary-based instead — which then needs its own sign-off rather than inheriting Move's.
-
-Flagging now rather than letting it sit quietly, per the honesty standard the planning pack itself sets.
-
-**Also flagged in code, not yet content-final:** the fixed safeguarding response message text (Level 2/3, teen wording) is a first-pass draft I wrote to make the flow functional — it is **not** reviewed against PAPYRUS guidance (file 06 §6 item 2). Crisis resource numbers (Childline 0800 1111, Shout 85258, Samaritans 116 123, Papyrus HOPELINEUK 0800 068 4141) were verified current today. The message wording itself needs your sign-off as named reviewer before any beta family sees it.
+Everything else from today (auth, Mood Meter code, safeguarding logic) is already live in the repo and doesn't need anything from you to deploy — it needs this one migration to actually work end-to-end.
 
 ---
 
-## 3. What's built vs. what's next
+## 2. What's built vs. what's next
 
-**Built today:** repo scaffold, design tokens, schema, live Supabase with RLS, coach shell, learner check-in (free + Athena fields), signal-word detection, fixed safeguarding response UI, always-on resource list.
+**Built today (session 2):**
+- Marc Brackett Mood Meter word-picker (`js/data/mood-meter.js`), teen set default, adult set included for future parent-facing use
+- Unified safeguarding assessment (`js/safeguarding.js`) combining mood word, free text, and stress into one level, replacing the ad-hoc logic from session 1
+- Supabase Auth: sign-up, sign-in, sign-out, session check on load (`js/auth.js`), wired into `app.js` with a real (if minimal) sign-up/login form
+- `schema.md` v2 — corrected the `user`→`profiles` naming drift from session 1 and documented the new mood fields
 
-**Known gaps, not hidden:** no auth/login yet (`app.js` uses a temporary hardcoded test user ID — check-ins won't actually save against real Supabase until a real user exists), mood-meter/word-picker question above, safeguarding response copy needs your review, parent dashboard not started, notifications not started.
+**Known gaps, flagged not hidden:**
+- No family creation / learner-invite flow yet — a new sign-up gets a profile with `family_id = null`. Parent dashboard and multi-learner switching depend on this.
+- Combination-flag mood words (e.g. "overwhelmed") only check the current check-in for a second signal, not recent history — file 06 allows a recent-history window; that needs a Supabase query not yet built.
+- Adult-facing safeguarding response copy not written (teen-only so far, correctly prioritised since teen is Learn's primary audience).
+- Role is hardcoded to `'learner'` on sign-up — role selection needs the family/invite flow to make sense.
 
-**Next session:** resolve the mood-meter question, get your sign-off on the safeguarding response copy, then Supabase Auth (sign-up/login) — check-in can't go live to a real beta family without it.
+**Still needs Graeme's sign-off, not a build task:** the actual wording of the fixed safeguarding response messages (Level 2/3), and the mood-word-to-safeguarding-level mapping documented in `js/safeguarding.js`'s header comment — both are functional first-pass drafts.
 
 ---
 
-## 4. Beta-blocking vs public-launch-blocking (unchanged)
+## 3. Beta-blocking vs public-launch-blocking
 
-**Beta-blocking:** crisis-signal detection ✅ built, needs copy sign-off. Fixed response + always-visible resources ✅ built, needs copy sign-off. Resource links ✅ verified today. RLS family hard-wall ✅ live, needs adversarial testing with real accounts. Journal Privacy Rule ✅ enforced (scan only touches the dedicated field). Auth — not built, beta-blocking.
+**Beta-blocking:** crisis detection ✅ built (Mood Meter + free text + stress, unified), needs copy/mapping sign-off. Fixed response + resources ✅ built. RLS ✅ live. Journal Privacy Rule ✅ enforced. **Auth ✅ built** — was the last beta-blocking infrastructure gap. **Family/invite flow — now the next beta-blocking item**, since a beta family can't actually function as a family without it.
 
 **Public-launch-blocking:** formal reviewer sign-off, DPIA, ICO registration, Article 22 position, Online Safety Act position, age verification/GDPR-K, pricing/paywall.
 
 ---
 
-## 5. Build windows
+## 4. Build windows
 
-- **Window A** (10–18 Aug): infrastructure ✅, coach shell + check-in ✅. Remaining: auth, mood-meter decision, safeguarding copy sign-off, parent dashboard start.
-- **Window B** (19–28 Aug, holiday, phone-only): coach-voice scripts, parent coaching content, notification copy, safeguarding copy review (phone-reviewable).
+- **Window A** (10–18 Aug): infrastructure ✅, coach shell + check-in ✅, Mood Meter ✅, auth ✅. Remaining: family creation/invite flow, parent dashboard start, safeguarding copy sign-off.
+- **Window B** (19–28 Aug, holiday, phone-only): coach-voice scripts, parent coaching content, notification copy, safeguarding copy review.
 - **Window C** (29–31 Aug): wire content in, QA, re-verify crisis links, final commits, invite first beta families.
 
 ---
 
-## 6. Version history
+## 5. Version history
 
 | Version | Date | Change |
 |---|---|---|
-| v1–v5 | 10 Aug 2026 | See archived versions in `Past MS/`. |
-| v6 | 10 Aug 2026 | Coach shell + check-in flow built and pushed, signal-word detection wired. Flagged: file 06/file 04 mood-meter vs. check-in-structure mismatch, needs Graeme + reviewer decision. Safeguarding response copy is functional draft, not yet signed off. Auth identified as next beta-blocking build item. |
+| v1–v6 | 10 Aug 2026 | See `Past MS/`. |
+| v7 | 10 Aug 2026 | Mood Meter word-picker built (resolves v6 gap), unified safeguarding assessment, Supabase Auth built, schema v2 (naming fix + mood fields). Flagged: family/invite flow is the next beta-blocking item. |
 
 ---
 
-*Build New Habits Ltd · Alongside: Learn · Master Schedule · 10 Aug 2026 v6*
+*Build New Habits Ltd · Alongside: Learn · Master Schedule · 10 Aug 2026 v7*
