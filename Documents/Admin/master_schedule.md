@@ -1,5 +1,5 @@
 # Alongside: Learn — Master Schedule
-## 10 Aug 2026 v3
+## 10 Aug 2026 v4
 
 Build New Habits Ltd | Single source of truth for all Learn build, business, content, and safeguarding/legal tasks. Read in full at the start of every session (file 07, Section 3). Updated at the close of every session.
 
@@ -11,10 +11,10 @@ Build New Habits Ltd | Single source of truth for all Learn build, business, con
 |---|---|
 | Target date | 1 Sept 2026 |
 | Launch scope | Private beta — trusted families only |
-| Stack | Vanilla JS PWA, GitHub Pages, Supabase (separate project, Frankfurt eu-central-1) |
-| Repo state | Planning pack + Admin schedule live. Scaffold and schema.md added today (Section 2). |
-| Safeguarding reviewers | Graeme (safeguarding-trained, 20+ years) — self, ongoing. A solicitor — to be confirmed. A school DSL (Designated Safeguarding Lead), personal contact — to be confirmed. **Logged, not yet formally engaged/signed off.** |
-| Pricing | Deferred deliberately. Revisit before any public launch — do not build paywall copy until then. |
+| Stack | Vanilla JS PWA, GitHub Pages, Supabase (Frankfurt, project live) |
+| Supabase project | **Live.** URL: `https://jbajchcwnbqughesaepc.supabase.co`. Publishable key wired into `js/store.js`. Schema not yet applied — SQL migration ready, waiting on Graeme to run it (Section 2). |
+| Safeguarding reviewers | Graeme (self, 20+ yrs trained) — ongoing. Solicitor — TBC. School DSL friend — TBC. |
+| Pricing | Deferred to pre-public-launch. |
 
 ---
 
@@ -25,39 +25,42 @@ Build New Habits Ltd | Single source of truth for all Learn build, business, con
 | 1 | Launch scope: private beta, trusted families | Confirmed 10 Aug |
 | 2 | Stack: vanilla JS PWA + Supabase (Frankfurt, separate project) | Confirmed 10 Aug |
 | 3 | Tracker location: `Documents/Admin/master_schedule.md` | In use |
-| 4 | Safeguarding reviewers named: Graeme (self), solicitor (TBC), school DSL friend (TBC) | Confirmed 10 Aug — engagement/formal sign-off still to happen |
-| 5 | Pricing | Deferred to pre-public-launch, confirmed 10 Aug |
+| 4 | Safeguarding reviewers named | Confirmed 10 Aug — engagement/sign-off still to happen |
+| 5 | Pricing | Deferred to pre-public-launch |
+| 6 | Supabase project created (Frankfurt) | **Done 10 Aug** — URL and publishable key received and wired in |
 
 ---
 
-## 2. Today — 10 Aug 2026
+## 2. Right now — action needed from Graeme
 
-**Aim:** get the repo from "planning docs only" to "scaffold exists, schema is real, build can start the moment Supabase is live."
+**Run the schema migration.** SQL file is live at `sql/001_initial_schema.sql` in the repo. Creates every table from `schema.md` v1, enables RLS on all of them, and applies the first-pass family-scoped policies (owner-only on `checkins`, `parent_checkins`, and `risk_matrices` raw scores — parents read only through the masked `risk_matrix_parent_view`).
 
-| Task | Owner | Success criteria |
-|---|---|---|
-| Repo folder scaffold (`index.html`, `css/`, `js/`, `sw.js` stub) per file 00 §3 | Claude | Pushed to `main`, verified by fresh clone |
-| `variables.css` populated with confirmed design tokens (file 01) | Claude | All colour/spacing/radius/type tokens present, Learn indigo palette used, contrast values match file 01 table |
-| `schema.md` — real schema, replacing file 05's scaffold status | Claude | Every table/field from file 05 reviewed and either kept, renamed, or dropped; family-scoped RLS approach stated in plain terms for later policy-writing; no field left as "TBC" without being logged as a gap |
-| **Supabase project created (Frankfurt, separate from Move)** | **Graeme** | Project exists; connection URL + keys shared with me so I can start wiring the schema in |
-| Reviewer engagement — first message to solicitor and DSL friend, even informal | Graeme | Not blocking today's build, but the sooner this starts the less it threatens the beta date |
+Steps:
+1. Supabase dashboard → your `Alongside-Learn` project → left sidebar → **SQL Editor**
+2. **New query**
+3. Open `sql/001_initial_schema.sql` from the repo (or I can paste the contents directly if easier on mobile), paste the whole thing in
+4. Click **Run**
+5. Sanity check — run this after, should return 10 rows all with `rowsecurity = true`:
+   ```sql
+   select tablename, rowsecurity from pg_tables where schemaname = 'public';
+   ```
 
-**What "done" looks like by end of today:** scaffold and schema live in the repo, fresh-clone verified, master schedule updated to v4 reflecting it. The one thing I can't do myself is create the Supabase project — that's the one action item that's actually yours today.
-
----
-
-## 3. Beta-blocking vs public-launch-blocking (unchanged from v2, restated for reference)
-
-**Beta-blocking:** crisis-signal detection wired and tested, fixed safeguarding response + always-visible resources live, resource links verified, RLS family hard-wall tested, Journal Privacy Rule enforced from day one.
-
-**Public-launch-blocking (not needed for beta):** formal reviewer sign-off, DPIA, ICO registration, Article 22 position, Online Safety Act position, age verification/GDPR-K, pricing/paywall.
+Once that's run and confirmed, the app can actually talk to real data and I can start building the coach shell and check-in flow against it.
 
 ---
 
-## 4. Build windows (unchanged from v2)
+## 3. Beta-blocking vs public-launch-blocking (unchanged)
 
-- **Window A** (10–18 Aug): scaffold, schema, Supabase, RLS first pass, coach shell, check-in flows incl. safeguarding detection, design system components.
-- **Window B** (19–28 Aug, holiday, phone-only): coach-voice scripts, parent coaching content, notification copy — no Supabase needed.
+**Beta-blocking:** crisis-signal detection wired and tested, fixed safeguarding response + always-visible resources live, resource links verified, RLS family hard-wall tested (first-pass now written, needs real testing once schema is applied), Journal Privacy Rule enforced.
+
+**Public-launch-blocking:** formal reviewer sign-off, DPIA, ICO registration, Article 22 position, Online Safety Act position, age verification/GDPR-K, pricing/paywall.
+
+---
+
+## 4. Build windows
+
+- **Window A** (10–18 Aug): scaffold ✅, schema written ✅, Supabase live ✅, migration pending Graeme's run, then: RLS testing, coach shell, check-in flow incl. safeguarding detection, design system components.
+- **Window B** (19–28 Aug, holiday, phone-only): coach-voice scripts, parent coaching content, notification copy.
 - **Window C** (29–31 Aug): wire content in, QA, re-verify crisis links, final commits, invite first beta families.
 
 ---
@@ -67,9 +70,10 @@ Build New Habits Ltd | Single source of truth for all Learn build, business, con
 | Version | Date | Change |
 |---|---|---|
 | v1 | 10 Aug 2026 | First master schedule. |
-| v2 | 10 Aug 2026 | Launch scope + stack confirmed. Beta vs public-launch blockers split. |
-| v3 | 10 Aug 2026 | Safeguarding reviewers named (Graeme, solicitor TBC, DSL friend TBC). Pricing deferred. Today's task list and success criteria added. |
+| v2 | 10 Aug 2026 | Launch scope + stack confirmed. |
+| v3 | 10 Aug 2026 | Reviewers named, pricing deferred, today's plan added. |
+| v4 | 10 Aug 2026 | Repo scaffold, `variables.css`, and `schema.md` v1 pushed. Supabase project created and connection details wired into `store.js`. SQL migration (`sql/001_initial_schema.sql`) written and pushed — awaiting Graeme to run it in the Supabase SQL editor. |
 
 ---
 
-*Build New Habits Ltd · Alongside: Learn · Master Schedule · 10 Aug 2026 v3*
+*Build New Habits Ltd · Alongside: Learn · Master Schedule · 10 Aug 2026 v4*
