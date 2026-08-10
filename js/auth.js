@@ -8,9 +8,12 @@
 import { supabase } from './store.js';
 
 /**
- * @param {{ email: string, password: string, name: string, role: 'parent'|'learner', dateOfBirth: string }} input
+ * @param {{ email: string, password: string, name: string, dateOfBirth: string }} input
+ * Role is intentionally not set here — it's determined by whichever of
+ * createFamily() (role becomes 'parent') or joinFamily() (role passed in)
+ * the person completes next, in the family-setup step.
  */
-export async function signUp({ email, password, name, role, dateOfBirth }) {
+export async function signUp({ email, password, name, dateOfBirth }) {
   const { data: authData, error: authError } = await supabase.auth.signUp({ email, password });
   if (authError) throw authError;
 
@@ -23,8 +26,8 @@ export async function signUp({ email, password, name, role, dateOfBirth }) {
 
   const { error: profileError } = await supabase.from('profiles').insert({
     user_id: userId,
-    family_id: null, // TODO: family creation/invite flow — next session
-    role,
+    family_id: null,
+    role: null,
     name,
     date_of_birth: dateOfBirth || null,
     coach_voice: 'nurturing',
@@ -77,9 +80,39 @@ export async function loadCheckinContext(userId) {
 
   return {
     userId: profile.user_id,
+    familyId: profile.family_id,
+    role: profile.role,
     tier,
     ageBand: calculateAgeBand(profile.date_of_birth),
   };
+}
+
+/**
+ * Creates a new family and makes the current user its first parent.
+ * Server-side RPC (sql/003_family_join.sql) — atomic, enforces role='parent'
+ * on the profile as a side effect.
+ * @returns {Promise<string>} the new family_id, to be shared as the invite code
+ */
+export async function createFamily(academicYearStart) {
+  const { data, error } = await supabase.rpc('create_family', {
+    academic_year_start_input: academicYearStart || null,
+  });
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Joins an existing family using its family_id as the invite code.
+ * Server-side RPC enforces the 2-parent / 5-learner caps (file 03 §3).
+ * @param {string} familyId
+ * @param {'parent'|'learner'} role
+ */
+export async function joinFamily(familyId, role) {
+  const { error } = await supabase.rpc('join_family', {
+    family_id_input: familyId,
+    join_as_role: role,
+  });
+  if (error) throw error;
 }
 
 function calculateAgeBand(dateOfBirth) {

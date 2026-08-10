@@ -1,16 +1,13 @@
 // Alongside: Learn — App entry point
-// 10 Aug 2026 v3
-// Real Supabase Auth session check on load. If signed in, loads the check-in
-// context (profile + family tier) and renders the check-in flow. If not,
-// renders a minimal sign-up/login form.
-//
-// KNOWN GAP, flagged not hidden: no family creation/invite flow yet — a new
-// sign-up gets a profile with no family, so tier defaults to 'athena' and
-// the parent-dashboard/multi-learner features aren't reachable yet. That's
-// real next-session work.
+// 10 Aug 2026 v4
+// Real Supabase Auth session check on load. If signed in with no family yet,
+// shows family creation/join. Once a family exists, loads the check-in
+// context (profile + family tier) and renders the check-in flow. If not
+// signed in, renders a minimal sign-up/login form.
 
 import { getCurrentUser, signIn, signUp, loadCheckinContext } from './auth.js';
 import { renderCheckin, renderAlwaysOnResources } from './checkin.js';
+import { renderFamilySetup } from './family-setup.js';
 
 const mainContainer = document.getElementById('checkin-root');
 const resourcesContainer = document.getElementById('resources-root');
@@ -29,6 +26,11 @@ async function bootstrap() {
     const msg = document.createElement('p');
     msg.textContent = "Signed in, but no profile found for this account yet.";
     mainContainer.appendChild(msg);
+    return;
+  }
+
+  if (!ctx.familyId) {
+    renderFamilySetup(mainContainer, bootstrap);
     return;
   }
 
@@ -98,7 +100,6 @@ function renderAuthForm(container) {
           email: emailField.input.value,
           password: passwordField.input.value,
           name: nameField.input.value,
-          role: 'learner', // TODO: role selection once family/invite flow exists
           dateOfBirth: dobField.input.value,
         });
         if (result.pendingConfirmation) {

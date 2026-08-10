@@ -1,5 +1,5 @@
 # Alongside: Learn — Schema
-## 10 Aug 2026 v2
+## 10 Aug 2026 v3
 
 Build New Habits Ltd | Confirmed working schema, replacing the scaffold status of Documents/Planning file 05. Written schema-first per file 07 §1/§4: no application file reads a field not documented here. Any change to this file supersedes it with an incremented version — no silent field additions.
 
@@ -161,4 +161,15 @@ These are genuinely fine to add later without breaking anything above — none o
 
 ---
 
-*Build New Habits Ltd · Alongside: Learn · Schema · 10 Aug 2026 v1*
+## 7. Family setup RPCs (v3, `sql/003_family_join.sql`)
+
+`profiles.role` is now nullable — unset until family setup completes.
+
+- **`create_family(academic_year_start_input date default null)`** → returns the new `family_id`. Caller becomes the family's first parent; their profile's `role` is set to `parent`. This `family_id` doubles as the beta's invite code — shared out-of-band (text/WhatsApp), not via an email-invite system. Proportionate for a small trusted-families beta; flag for a real invite-link system if the model scales.
+- **`join_family(family_id_input uuid, join_as_role text)`** → joins an existing family as `parent` or `learner`, enforcing the 2-parent/5-learner caps (file 03 §3). Sets the caller's `role` and `family_id`.
+
+Both are `security definer` so they can bypass the `families` table's owner-only-by-membership RLS to perform the join atomically. **Known limitation:** not fully race-safe under concurrent simultaneous joins — acceptable for a handful of beta families, needs hardening before the model scales.
+
+---
+
+*Build New Habits Ltd · Alongside: Learn · Schema · 10 Aug 2026 v2*
