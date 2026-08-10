@@ -1,5 +1,5 @@
 # Alongside: Learn — Master Schedule
-## 10 Aug 2026 v13
+## 10 Aug 2026 v14
 
 Build New Habits Ltd | Single source of truth for all Learn build, business, content, and safeguarding/legal tasks. Read in full at the start of every session (file 07, Section 3). Updated at the close of every session.
 
@@ -11,39 +11,41 @@ Build New Habits Ltd | Single source of truth for all Learn build, business, con
 |---|---|
 | Target date | 1 Sept 2026 |
 | Launch scope | Private beta — trusted families only |
-| **Learner assignments** | **Built.** Learner can now add/track assignments, closing the loop with the parent dashboard, which previously had nothing real to show. |
-| Navigation | Learner now has a simple "Check in / My work" tab bar — previously there was no way to reach anything except the check-in. |
+| **Flashcards** | **Built.** Add cards, review what's due (question → reveal answer → correct/incorrect), simple spaced-repetition scheduling. Third nav tab added. |
 | Safeguarding reviewers | Graeme (self) — ongoing. Solicitor — TBC. School DSL friend — TBC. |
 | Pricing | Deferred to pre-public-launch. |
 
 ---
 
-## 1. What's testable now, end-to-end
+## 1. How the spaced repetition works (so it's not a black box)
 
-1. Sign in as the learner account → **My work** tab → add an assignment
-2. Sign in as the parent account → dashboard should now show that assignment under the learner's name
-
-This is the first point where the parent dashboard actually shows real data instead of an empty state.
+No interval is stored — it's worked out each time from the gap between a card's last scheduled date and today. Get it right, that gap doubles (capped at 30 days). Get it wrong, it resets to tomorrow. This is a simple, honest version — not a real algorithm like SM-2 — and that's a fine trade-off for beta. Worth knowing if cards start feeling like they're scheduling oddly at the extremes (very long-overdue cards, for instance).
 
 ---
 
-## 2. Beta-blocking vs public-launch-blocking
+## 2. What's testable now
 
-**Beta-blocking:** crisis detection ✅, fixed response + resources ✅, RLS ✅, Journal Privacy Rule ✅, auth ✅, family creation/join ✅, parent dashboard ✅, role-based routing ✅, **learner assignments ✅**.
+Learner: **Flashcards** tab → add a card → if scheduled for today (which a new card always is), it appears immediately under "Due for review" → tap through the reveal/correct/incorrect flow and watch its next review date change in the "All your cards" list below.
 
-**Next build items, none launch-blocking on their own:** flashcards, revision timetable, notifications, coach-suggested content (currently everything is learner-entered manually, no coach-generated suggestions yet).
+---
+
+## 3. Beta-blocking vs public-launch-blocking
+
+**Beta-blocking:** crisis detection ✅, fixed response + resources ✅, RLS ✅, Journal Privacy Rule ✅, auth ✅, family creation/join ✅, parent dashboard ✅, role-based routing ✅, learner assignments ✅, **flashcards ✅**.
+
+**Next build items, none launch-blocking on their own:** revision timetable, notifications, coach-suggested flashcards/assignments (`coach_suggested` flag exists in the schema, nothing populates it yet — everything so far is learner-entered).
 
 **Public-launch-blocking (unchanged):** formal reviewer sign-off, DPIA, ICO registration, Article 22 position, Online Safety Act position, age verification/GDPR-K, pricing/paywall, invite-link system, possibly custom SMTP.
 
 ---
 
-## 3. Version history
+## 4. Version history
 
 | Version | Date | Change |
 |---|---|---|
-| v1–v12 | 10 Aug 2026 | See `Past MS/`. |
-| v13 | 10 Aug 2026 | Learner assignments (add/track status) built, plus simple nav tabs so a learner can reach it. Closes the loop with the parent dashboard built earlier the same day. |
+| v1–v13 | 10 Aug 2026 | See `Past MS/`. |
+| v14 | 10 Aug 2026 | Flashcards built — add, review with simple spaced repetition, third nav tab. |
 
 ---
 
-*Build New Habits Ltd · Alongside: Learn · Master Schedule · 10 Aug 2026 v13*
+*Build New Habits Ltd · Alongside: Learn · Master Schedule · 10 Aug 2026 v14*
