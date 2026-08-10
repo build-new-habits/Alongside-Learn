@@ -21,6 +21,16 @@ body {
   line-height: 1.5;
 }
 
+/* Page container — 10 Aug 2026, added after first browser preview showed
+   content stretching edge-to-edge on desktop with no reading-width limit.
+   Mobile-first: full-bleed under 480px (where it doesn't matter), constrained
+   above that so desktop/tablet doesn't look broken. */
+main {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-5);
+}
+
 h1, h2, h3 { color: var(--color-dark); margin: 0 0 var(--space-3) 0; }
 h1 { font-size: var(--font-size-h1); font-weight: var(--font-weight-bold); }
 h2 { font-size: var(--font-size-h2); font-weight: var(--font-weight-bold); }

@@ -12,34 +12,62 @@ import { supabase } from './store.js';
  * Role is intentionally not set here — it's determined by whichever of
  * createFamily() (role becomes 'parent') or joinFamily() (role passed in)
  * the person completes next, in the family-setup step.
+ *
+ * FIXED 10 Aug 2026: this project requires email confirmation, so signUp()
+ * returns a user object but NO session until the email is confirmed. The
+ * original code checked `!userId` to decide whether to defer profile
+ * creation — userId is basically always present, so it tried to insert the
+ * profile immediately with no active session, and RLS correctly rejected it
+ * (auth.uid() is null with no session). Now checks the actual session, and
+ * stashes name/DOB in the auth user's metadata so ensureProfile() can create
+ * the profile row on first real sign-in instead.
  */
 export async function signUp({ email, password, name, dateOfBirth }) {
-  const { data: authData, error: authError } = await supabase.auth.signUp({ email, password });
+  const { data: authData, error: authError } = await supabase.auth.signUp({
+    email,
+    password,
+    options: { data: { name, date_of_birth: dateOfBirth || null } },
+  });
   if (authError) throw authError;
 
-  const userId = authData.user?.id;
-  if (!userId) {
-    // Email confirmation may be required before a session exists — the
-    // profile row is created on first sign-in instead, via ensureProfile().
+  if (!authData.session) {
     return { pendingConfirmation: true };
   }
 
-  const { error: profileError } = await supabase.from('profiles').insert({
-    user_id: userId,
+  await ensureProfile(authData.user);
+  return { pendingConfirmation: false, userId: authData.user.id };
+}
+
+/**
+ * Creates the profile row if it doesn't exist yet — covers both a normal
+ * sign-up (session available immediately) and the email-confirmation case
+ * (profile wasn't created at sign-up time, created here on first real sign-in
+ * instead). Reads name/date_of_birth from auth user_metadata, set during
+ * signUp() above.
+ */
+export async function ensureProfile(user) {
+  const { data: existing } = await supabase
+    .from('profiles')
+    .select('user_id')
+    .eq('user_id', user.id)
+    .maybeSingle();
+  if (existing) return;
+
+  const { error } = await supabase.from('profiles').insert({
+    user_id: user.id,
     family_id: null,
     role: null,
-    name,
-    date_of_birth: dateOfBirth || null,
+    name: user.user_metadata?.name || user.email,
+    date_of_birth: user.user_metadata?.date_of_birth || null,
     coach_voice: 'nurturing',
   });
-  if (profileError) throw profileError;
-
-  return { pendingConfirmation: false, userId };
+  if (error) throw error;
 }
 
 export async function signIn({ email, password }) {
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) throw error;
+  await ensureProfile(data.user);
   return data.user;
 }
 
