@@ -1,5 +1,5 @@
 # Alongside: Learn — Master Schedule
-## 10 Aug 2026 v8
+## 10 Aug 2026 v9
 
 Build New Habits Ltd | Single source of truth for all Learn build, business, content, and safeguarding/legal tasks. Read in full at the start of every session (file 07, Section 3). Updated at the close of every session.
 
@@ -11,52 +11,45 @@ Build New Habits Ltd | Single source of truth for all Learn build, business, con
 |---|---|
 | Target date | 1 Sept 2026 |
 | Launch scope | Private beta — trusted families only |
-| Infrastructure | Scaffold, schema (v3), Supabase (RLS confirmed), Mood Meter, unified safeguarding assessment, auth, **family creation + invite-code join** — all built and live. |
+| GitHub Pages | **Live** at `build-new-habits.github.io/Alongside-Learn/` — real browser preview available for the first time today. |
+| Infrastructure | Scaffold, schema (v3), Supabase (RLS confirmed, all 3 migrations run), Mood Meter, safeguarding assessment, auth, family creation/join — all built. Sign-up bug (below) fixed same session. |
 | Safeguarding reviewers | Graeme (self) — ongoing. Solicitor — TBC. School DSL friend — TBC. |
 | Pricing | Deferred to pre-public-launch. |
 
-**End-to-end signup → family → check-in flow is now functionally complete.** This is the first point where a real person could plausibly sign up, create or join a family, and do a check-in with safeguarding detection active — pending the action below and the copy/mapping sign-off already flagged in v7.
+---
+
+## 1. Bug found and fixed today — first real browser test
+
+**What happened:** Graeme tried to sign up in the live browser preview and got `new row violates row-level security policy for table "profiles"`.
+
+**Root cause:** the Supabase project requires email confirmation. `signUp()` returns a user object immediately, but no active session until the email is confirmed. The code was checking the wrong thing (`!userId`, which is basically always true) to decide whether to defer profile creation, so it tried to write the profile row with no authenticated session — RLS correctly rejected it.
+
+**Fix:** now checks the actual session, stashes name/date-of-birth in the Supabase auth user's metadata at sign-up, and creates the profile row via a new `ensureProfile()` function — called either immediately (if no confirmation needed) or on first real sign-in (if it was). Fixed and pushed same session, no SQL change needed.
+
+**Also fixed:** `.field` CSS only styled `input[type="text"]`, so email/password/date inputs rendered as unstyled browser defaults while only the Name field got the intended look — this is what Graeme saw as "aesthetics off." Broadened the selector to cover all input types used in the app, and added a page container (max-width, centred, padded) so desktop/tablet views don't stretch edge-to-edge. Both were genuine bugs, not just early-build roughness, and worth fixing immediately rather than deferring — a broken sign-up blocks everything downstream, and a mis-scoped CSS selector would have silently affected every future form too.
+
+**Open question for Graeme, not urgent:** the project currently requires email confirmation. For a small trusted-families beta this adds a step (checking email, clicking a link) that may not be necessary — Supabase Dashboard → Authentication → Providers → Email → toggle "Confirm email" off, if you'd rather beta families skip that step. No action needed unless you want it changed.
 
 ---
 
-## 1. Action needed from Graeme — right now
+## 2. Right now — retest signup
 
-**Run `sql/003_family_join.sql`** in the Supabase SQL Editor (after 001 and 002, which are done). Adds: family creation and invite-code join as two server-side functions, plus a missing INSERT policy on `families` that was a gap from session 1. Sanity check included in the file.
-
-**How the invite code works, so you know what to expect:** when a parent creates a family, the app shows them the family's ID (a long code) to text/share with whoever's joining — co-parent or learners. There's no email-invite system this session; for a handful of trusted beta families, sharing a code directly is proportionate. Flagged if this needs to become a proper invite-link system later.
-
----
-
-## 2. What's built vs. what's next
-
-**Built today (session 3, continuing session 2):**
-- Family creation (`create_family` RPC) — first parent, gets a shareable code
-- Join-by-code flow (`join_family` RPC) — enforces 2-parent/5-learner caps
-- `app.js` now routes: signed out → auth form; signed in, no family → family setup; signed in with family → check-in
-- `schema.md` v3 documents both RPCs and the now-nullable `profiles.role`
-
-**Known gaps, flagged not hidden:**
-- Invite mechanism is a raw shared code, not an email/link system
-- Family-join isn't fully race-safe under simultaneous concurrent joins — fine at beta scale, needs hardening if it grows
-- No parent dashboard yet — a parent who joins a family has nowhere to see their learners' data yet, even though the RLS policies from session 1 already support it
-- Role selection during "join" trusts the person to pick correctly (learner vs parent) — no verification step
-
-**Still needs Graeme's sign-off, not a build task (carried from v7):** safeguarding response copy, mood-word-to-level mapping.
+Worth trying sign-up again in the browser now that the fix is live (may need a hard refresh — Ctrl+Shift+R / Cmd+Shift+R — since GitHub Pages can cache briefly). If the same email from the failed attempt won't work a second time, try a fresh one — the first attempt likely created an auth user without a profile.
 
 ---
 
 ## 3. Beta-blocking vs public-launch-blocking
 
-**Beta-blocking:** crisis detection ✅, fixed response + resources ✅, RLS ✅, Journal Privacy Rule ✅, auth ✅, family creation/join ✅. **Parent dashboard is now the next beta-blocking item** — a family isn't really usable as a family until a parent can see something.
+**Beta-blocking:** crisis detection ✅, fixed response + resources ✅, RLS ✅, Journal Privacy Rule ✅, auth ✅ (bug fixed), family creation/join ✅. Parent dashboard — next item.
 
-**Public-launch-blocking:** formal reviewer sign-off, DPIA, ICO registration, Article 22 position, Online Safety Act position, age verification/GDPR-K, pricing/paywall, invite-link system (upgrade from shared-code).
+**Public-launch-blocking:** formal reviewer sign-off, DPIA, ICO registration, Article 22 position, Online Safety Act position, age verification/GDPR-K, pricing/paywall, invite-link system.
 
 ---
 
 ## 4. Build windows
 
-- **Window A** (10–18 Aug): infrastructure ✅, check-in ✅, Mood Meter ✅, auth ✅, family creation/join ✅. Remaining: parent dashboard, safeguarding copy sign-off.
-- **Window B** (19–28 Aug, holiday, phone-only): coach-voice scripts, parent coaching content, notification copy, safeguarding copy review.
+- **Window A** (10–18 Aug): infrastructure ✅, check-in ✅, Mood Meter ✅, auth ✅ (bug fixed), family creation/join ✅, GitHub Pages live ✅. Remaining: parent dashboard, safeguarding copy sign-off.
+- **Window B** (19–28 Aug, holiday, phone-only): coach-voice scripts, parent coaching content, notification copy, safeguarding copy review — browser preview means these can now be checked visually on the phone too.
 - **Window C** (29–31 Aug): wire content in, QA, re-verify crisis links, final commits, invite first beta families.
 
 ---
@@ -65,9 +58,9 @@ Build New Habits Ltd | Single source of truth for all Learn build, business, con
 
 | Version | Date | Change |
 |---|---|---|
-| v1–v7 | 10 Aug 2026 | See `Past MS/`. |
-| v8 | 10 Aug 2026 | Family creation + invite-code join built (`sql/003_family_join.sql`, `js/family-setup.js`). Signup → family → check-in flow now end-to-end functional pending copy sign-off. Parent dashboard flagged as next beta-blocking item. |
+| v1–v8 | 10 Aug 2026 | See `Past MS/`. |
+| v9 | 10 Aug 2026 | GitHub Pages enabled — first real browser test. Found and fixed a sign-up-blocking RLS bug (email-confirmation session timing) and a CSS field-styling bug. Flagged the email-confirmation-on-by-default setting as an optional simplification for Graeme to consider. |
 
 ---
 
-*Build New Habits Ltd · Alongside: Learn · Master Schedule · 10 Aug 2026 v8*
+*Build New Habits Ltd · Alongside: Learn · Master Schedule · 10 Aug 2026 v9*
