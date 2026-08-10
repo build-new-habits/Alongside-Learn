@@ -1,5 +1,5 @@
 # Alongside: Learn — Master Schedule
-## 10 Aug 2026 v5
+## 10 Aug 2026 v6
 
 Build New Habits Ltd | Single source of truth for all Learn build, business, content, and safeguarding/legal tasks. Read in full at the start of every session (file 07, Section 3). Updated at the close of every session.
 
@@ -11,12 +11,10 @@ Build New Habits Ltd | Single source of truth for all Learn build, business, con
 |---|---|
 | Target date | 1 Sept 2026 |
 | Launch scope | Private beta — trusted families only |
-| Stack | Vanilla JS PWA, GitHub Pages, Supabase (Frankfurt) |
-| Supabase project | **Live and schema applied.** 10 tables, RLS enabled and confirmed on all 10, first-pass family-scoped policies in place. |
+| Stack | Vanilla JS PWA, GitHub Pages, Supabase (Frankfurt, live, RLS confirmed on all 10 tables) |
+| Coach shell + check-in | **Built.** Coach-speaks-first, free-tier fields (energy/mood/sleep/subject), Athena-gated fields (stress/free text), signal-word safeguarding detection wired and writing to `checkins` + `learner_profiles.safeguarding_level`. |
 | Safeguarding reviewers | Graeme (self, 20+ yrs trained) — ongoing. Solicitor — TBC. School DSL friend — TBC. |
 | Pricing | Deferred to pre-public-launch. |
-
-**Window A infrastructure work is done as of today.** Schema, scaffold, and live database are all in place on day one of a 9-day window — ahead of where the plan expected to be. Remaining Window A time goes to actual feature build: coach shell, check-in flow, safeguarding detection.
 
 ---
 
@@ -24,55 +22,60 @@ Build New Habits Ltd | Single source of truth for all Learn build, business, con
 
 | # | Decision | Status |
 |---|---|---|
-| 1 | Launch scope: private beta, trusted families | Confirmed 10 Aug |
-| 2 | Stack: vanilla JS PWA + Supabase (Frankfurt, separate project) | Confirmed 10 Aug |
-| 3 | Tracker location: `Documents/Admin/master_schedule.md` | In use |
-| 4 | Safeguarding reviewers named | Confirmed 10 Aug — engagement/sign-off still to happen |
-| 5 | Pricing | Deferred to pre-public-launch |
-| 6 | Supabase project created (Frankfurt) | Done 10 Aug |
-| 7 | Schema migration run — 10 tables, RLS confirmed on all | **Done 10 Aug** |
+| 1–7 | (unchanged — see v5) | |
+| 8 | Coach shell + check-in flow built, safeguarding detection wired | Done 10 Aug |
 
 ---
 
-## 2. Next session — coach shell + check-in flow
+## 2. Gap surfaced during today's build — needs Graeme's read
 
-Priority order, per the beta-blocking framing already established:
+**File 06 (shared crisis policy) describes a Yale Mood Meter word-picker as the detection input — Learn's actual check-in (file 04) doesn't have one.** Learn's mood/energy/sleep/stress are 5-point tap-row scales, not a word-selection grid. Only the free-text field is word-based.
 
-1. Coach shell — coach-speaks-first pattern (file 04 §1), Nurturing voice only
-2. Learner daily check-in — free-tier fields first (energy/mood/sleep/subject), writing to `checkins` table
-3. Athena-gated fields (stress + free text) with the signal-word scan wired in (file 04 §3) — this is the beta-blocking safeguarding piece, build and manually test it in this same session rather than deferring it
-4. Fixed safeguarding response message + always-visible in-app resources (file 06 §3)
+What I built reflects Learn's real check-in structure: the free-text vocabulary scan (file 04 §3) is implemented and wired to a fixed safeguarding response. The mood-meter quadrant/combination-word system from file 06 (trapped, overwhelmed, etc. as selectable words) is **not** implemented, because there's no matching input in Learn's UI to apply it to.
 
-Not this session: parent dashboard, notifications, revision timetable, risk matrix — those come after the learner-facing core is solid.
+**This needs one of two resolutions, and it's squarely a safeguarding-reviewer-and-you decision, not a build one:**
+- (a) Add a word-picker input to Learn's check-in to match the shared family policy, or
+- (b) Formally document that Learn's detection method differs from Move's and is free-text-vocabulary-based instead — which then needs its own sign-off rather than inheriting Move's.
+
+Flagging now rather than letting it sit quietly, per the honesty standard the planning pack itself sets.
+
+**Also flagged in code, not yet content-final:** the fixed safeguarding response message text (Level 2/3, teen wording) is a first-pass draft I wrote to make the flow functional — it is **not** reviewed against PAPYRUS guidance (file 06 §6 item 2). Crisis resource numbers (Childline 0800 1111, Shout 85258, Samaritans 116 123, Papyrus HOPELINEUK 0800 068 4141) were verified current today. The message wording itself needs your sign-off as named reviewer before any beta family sees it.
 
 ---
 
-## 3. Beta-blocking vs public-launch-blocking (unchanged)
+## 3. What's built vs. what's next
 
-**Beta-blocking:** crisis-signal detection wired and tested, fixed safeguarding response + always-visible resources live, resource links verified, RLS family hard-wall (schema live, needs real adversarial testing once there's real data to test against), Journal Privacy Rule enforced.
+**Built today:** repo scaffold, design tokens, schema, live Supabase with RLS, coach shell, learner check-in (free + Athena fields), signal-word detection, fixed safeguarding response UI, always-on resource list.
+
+**Known gaps, not hidden:** no auth/login yet (`app.js` uses a temporary hardcoded test user ID — check-ins won't actually save against real Supabase until a real user exists), mood-meter/word-picker question above, safeguarding response copy needs your review, parent dashboard not started, notifications not started.
+
+**Next session:** resolve the mood-meter question, get your sign-off on the safeguarding response copy, then Supabase Auth (sign-up/login) — check-in can't go live to a real beta family without it.
+
+---
+
+## 4. Beta-blocking vs public-launch-blocking (unchanged)
+
+**Beta-blocking:** crisis-signal detection ✅ built, needs copy sign-off. Fixed response + always-visible resources ✅ built, needs copy sign-off. Resource links ✅ verified today. RLS family hard-wall ✅ live, needs adversarial testing with real accounts. Journal Privacy Rule ✅ enforced (scan only touches the dedicated field). Auth — not built, beta-blocking.
 
 **Public-launch-blocking:** formal reviewer sign-off, DPIA, ICO registration, Article 22 position, Online Safety Act position, age verification/GDPR-K, pricing/paywall.
 
 ---
 
-## 4. Build windows
+## 5. Build windows
 
-- **Window A** (10–18 Aug): infrastructure ✅ (scaffold, schema, Supabase, RLS). Remaining: coach shell, check-in flow incl. safeguarding detection, design system components.
-- **Window B** (19–28 Aug, holiday, phone-only): coach-voice scripts, parent coaching content, notification copy.
+- **Window A** (10–18 Aug): infrastructure ✅, coach shell + check-in ✅. Remaining: auth, mood-meter decision, safeguarding copy sign-off, parent dashboard start.
+- **Window B** (19–28 Aug, holiday, phone-only): coach-voice scripts, parent coaching content, notification copy, safeguarding copy review (phone-reviewable).
 - **Window C** (29–31 Aug): wire content in, QA, re-verify crisis links, final commits, invite first beta families.
 
 ---
 
-## 5. Version history
+## 6. Version history
 
 | Version | Date | Change |
 |---|---|---|
-| v1 | 10 Aug 2026 | First master schedule. |
-| v2 | 10 Aug 2026 | Launch scope + stack confirmed. |
-| v3 | 10 Aug 2026 | Reviewers named, pricing deferred. |
-| v4 | 10 Aug 2026 | Scaffold, schema.md, Supabase project created, SQL migration written. |
-| v5 | 10 Aug 2026 | Migration run and confirmed — 10 tables live, RLS enabled on all. Window A infrastructure complete. Next session scoped: coach shell + check-in flow, safeguarding detection prioritised. |
+| v1–v5 | 10 Aug 2026 | See archived versions in `Past MS/`. |
+| v6 | 10 Aug 2026 | Coach shell + check-in flow built and pushed, signal-word detection wired. Flagged: file 06/file 04 mood-meter vs. check-in-structure mismatch, needs Graeme + reviewer decision. Safeguarding response copy is functional draft, not yet signed off. Auth identified as next beta-blocking build item. |
 
 ---
 
-*Build New Habits Ltd · Alongside: Learn · Master Schedule · 10 Aug 2026 v5*
+*Build New Habits Ltd · Alongside: Learn · Master Schedule · 10 Aug 2026 v6*
