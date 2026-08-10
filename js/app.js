@@ -146,19 +146,32 @@ function showResendButton(form, email) {
   btn.type = 'button';
   btn.className = 'btn-secondary resend-btn';
   btn.textContent = 'Resend confirmation email';
+
+  const resendError = document.createElement('p');
+  resendError.className = 'checkin-error resend-error';
+  resendError.setAttribute('role', 'alert');
+
   btn.addEventListener('click', async () => {
     btn.disabled = true;
     btn.textContent = 'Sending…';
+    resendError.textContent = '';
     try {
       await resendConfirmation(email);
-      btn.textContent = 'Sent — check your email';
+      btn.textContent = 'Sent — check your email (and spam/junk)';
     } catch (err) {
       btn.textContent = 'Resend confirmation email';
       btn.disabled = false;
+      // FIXED 10 Aug 2026: this error was only logged to the console before,
+      // invisible to the person actually using the app. Now shown directly —
+      // the likely cause is Supabase's built-in test email service, which
+      // has a low rate limit (a handful of emails per hour) not meant for
+      // real use. See master_schedule.md for the custom-SMTP flag.
+      resendError.textContent = err.message || 'Could not resend — please wait a minute and try again.';
       console.error(err);
     }
   });
   form.appendChild(btn);
+  form.appendChild(resendError);
 }
 
 bootstrap();
