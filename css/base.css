@@ -1,0 +1,63 @@
+/*
+  Alongside: Learn — Base styles
+  10 Aug 2026 v1
+*/
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-family);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-regular);
+  color: var(--color-dark);
+  background: var(--color-white);
+  line-height: 1.5;
+}
+
+h1, h2, h3 { color: var(--color-dark); margin: 0 0 var(--space-3) 0; }
+h1 { font-size: var(--font-size-h1); font-weight: var(--font-weight-bold); }
+h2 { font-size: var(--font-size-h2); font-weight: var(--font-weight-bold); }
+h3 { font-size: var(--font-size-h3); font-weight: var(--font-weight-semibold); color: var(--color-mid); }
+
+/* Focus visibility — WCAG 2.2 AA non-negotiable, never remove */
+:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Minimum touch target enforcement for interactive elements */
+button, a, input, select, textarea, [role="button"] {
+  min-height: var(--touch-target-min);
+}
+
+/* Skip link — required for keyboard users */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  background: var(--color-primary);
+  color: var(--color-white);
+  padding: var(--space-3) var(--space-4);
+  z-index: 100;
+}
+.skip-link:focus {
+  left: var(--space-4);
+  top: var(--space-4);
+}
+
+/* prefers-reduced-motion — hard requirement per file 01 §8, not optional */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
