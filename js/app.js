@@ -5,13 +5,15 @@
 // context (profile + family tier) and renders the check-in flow. If not
 // signed in, renders a minimal sign-up/login form.
 
-import { getCurrentUser, signIn, signUp, loadCheckinContext, resendConfirmation } from './auth.js';
+import { getCurrentUser, signIn, signUp, signOut, loadCheckinContext, resendConfirmation } from './auth.js';
 import { renderCheckin } from './checkin.js';
+import { renderParentDashboard } from './parent-dashboard.js';
 import { renderAlwaysOnResources } from './resources.js';
 import { renderFamilySetup } from './family-setup.js';
 
 const mainContainer = document.getElementById('checkin-root');
 const resourcesContainer = document.getElementById('resources-root');
+const headerContainer = document.getElementById('header-actions');
 
 // SAFETY FIX 10 Aug 2026: resources must be reachable without signing in —
 // someone opening the app while distressed shouldn't have to sign up first.
@@ -22,9 +24,12 @@ async function bootstrap() {
   const user = await getCurrentUser();
 
   if (!user) {
+    if (headerContainer) headerContainer.innerHTML = '';
     renderAuthForm(mainContainer);
     return;
   }
+
+  renderSignOutControl();
 
   const ctx = await loadCheckinContext(user.id);
   if (!ctx) {
@@ -40,7 +45,27 @@ async function bootstrap() {
     return;
   }
 
-  renderCheckin(mainContainer, ctx);
+  // ROUTING FIX 10 Aug 2026: previously always rendered the learner check-in
+  // regardless of role — a parent would have incorrectly landed on it.
+  if (ctx.role === 'parent') {
+    renderParentDashboard(mainContainer, ctx);
+  } else {
+    renderCheckin(mainContainer, ctx);
+  }
+}
+
+function renderSignOutControl() {
+  if (!headerContainer) return;
+  headerContainer.innerHTML = '';
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'sign-out-btn';
+  btn.textContent = 'Sign out';
+  btn.addEventListener('click', async () => {
+    await signOut();
+    await bootstrap();
+  });
+  headerContainer.appendChild(btn);
 }
 
 function renderAuthForm(container) {
