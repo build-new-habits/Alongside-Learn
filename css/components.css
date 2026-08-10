@@ -1,6 +1,124 @@
 /*
   Alongside: Learn — Component styles
-  10 Aug 2026 v1
-  Placeholder — populate as each component is built against file 01 §7 specs.
-  Buttons, cards, sliders etc. go here as they're implemented.
+  10 Aug 2026 v2
+  Built against file 01 §7 (buttons, cards, sliders) plus the check-in flow.
 */
+
+/* Coach message card */
+.coach-card {
+  background: var(--surface-pale);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  margin-bottom: var(--space-5);
+  font-size: var(--font-size-body-lg);
+  color: var(--text-dark);
+}
+
+.safeguarding-card {
+  border: 2px solid var(--learn-primary);
+  background: var(--learn-primary-light);
+}
+
+/* Buttons — Primary, per file 01 §7 */
+.btn-primary {
+  background: var(--learn-primary);
+  color: var(--color-white);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-body);
+  padding: var(--space-4) var(--space-6);
+  border: none;
+  border-radius: var(--radius-lg);
+  min-height: var(--touch-target-min);
+  width: 100%;
+  cursor: pointer;
+  transition: background-color var(--duration-button-state);
+}
+.btn-primary:hover { filter: brightness(1.1); }
+.btn-primary:active { filter: brightness(0.9); }
+.btn-primary:disabled { background: #D0D0D0; cursor: not-allowed; }
+
+/* Tap row — 5-point scale selectors for check-in questions */
+.tap-row {
+  border: none;
+  padding: 0;
+  margin: 0 0 var(--space-5) 0;
+}
+.tap-row legend {
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-dark);
+  margin-bottom: var(--space-3);
+  padding: 0;
+}
+.tap-row [role="radiogroup"] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.tap-row-option {
+  flex: 1 1 auto;
+  min-height: var(--touch-target-min);
+  min-width: 44px;
+  padding: var(--space-2) var(--space-3);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-white);
+  color: var(--text-dark);
+  font-size: var(--font-size-body-sm);
+  cursor: pointer;
+  transition: border-color var(--duration-card-selection), background-color var(--duration-card-selection);
+}
+.tap-row-option[aria-checked="true"] {
+  border-color: var(--learn-primary);
+  background: var(--learn-primary-light);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Form fields */
+.field {
+  margin-bottom: var(--space-5);
+}
+.field label {
+  display: block;
+  font-size: var(--font-size-body);
+  color: var(--text-dark);
+  margin-bottom: var(--space-2);
+}
+.field input[type="text"],
+.field textarea {
+  width: 100%;
+  font-family: var(--font-family);
+  font-size: var(--font-size-body);
+  padding: var(--space-3);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--text-dark);
+}
+.field textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+.field input[type="text"]:focus,
+.field textarea:focus {
+  border-color: var(--learn-primary);
+}
+
+/* Resource list — safeguarding and always-on support links */
+.resource-list {
+  list-style: none;
+  padding: 0;
+  margin: var(--space-4) 0 0 0;
+}
+.resource-list li {
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--font-size-body);
+}
+.resource-list li:last-child { border-bottom: none; }
+
+.checkin-error {
+  color: var(--color-error);
+  font-size: var(--font-size-body-sm);
+  margin-top: var(--space-3);
+}
