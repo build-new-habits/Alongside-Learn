@@ -76,6 +76,17 @@ export async function signOut() {
   if (error) throw error;
 }
 
+/**
+ * Resends the sign-up confirmation email. Needed after the Supabase project's
+ * Site URL setting is corrected (see master_schedule.md) — links sent before
+ * that fix point at localhost and will always fail, however many times
+ * they're clicked. A fresh send after the fix will use the corrected URL.
+ */
+export async function resendConfirmation(email) {
+  const { error } = await supabase.auth.resend({ type: 'signup', email });
+  if (error) throw error;
+}
+
 /** Returns the current authenticated user, or null. */
 export async function getCurrentUser() {
   const { data, error } = await supabase.auth.getUser();

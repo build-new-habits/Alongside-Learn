@@ -5,7 +5,7 @@
 // context (profile + family tier) and renders the check-in flow. If not
 // signed in, renders a minimal sign-up/login form.
 
-import { getCurrentUser, signIn, signUp, loadCheckinContext } from './auth.js';
+import { getCurrentUser, signIn, signUp, loadCheckinContext, resendConfirmation } from './auth.js';
 import { renderCheckin, renderAlwaysOnResources } from './checkin.js';
 import { renderFamilySetup } from './family-setup.js';
 
@@ -106,6 +106,7 @@ function renderAuthForm(container) {
           errorMsg.className = 'checkin-error';
           errorMsg.style.color = 'var(--color-success)';
           errorMsg.textContent = 'Check your email to confirm your account, then sign in.';
+          showResendButton(form, emailField.input.value);
           return;
         }
       }
@@ -132,6 +133,32 @@ function labelledInput(id, labelText, type) {
   wrapper.appendChild(label);
   wrapper.appendChild(input);
   return { wrapper, input };
+}
+
+/**
+ * Shown after a successful sign-up, so a person whose confirmation link
+ * failed or expired (e.g. the localhost-redirect issue found 10 Aug 2026)
+ * can get a fresh one without starting over.
+ */
+function showResendButton(form, email) {
+  if (form.querySelector('.resend-btn')) return; // don't duplicate on repeat submits
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'btn-secondary resend-btn';
+  btn.textContent = 'Resend confirmation email';
+  btn.addEventListener('click', async () => {
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+    try {
+      await resendConfirmation(email);
+      btn.textContent = 'Sent — check your email';
+    } catch (err) {
+      btn.textContent = 'Resend confirmation email';
+      btn.disabled = false;
+      console.error(err);
+    }
+  });
+  form.appendChild(btn);
 }
 
 bootstrap();
