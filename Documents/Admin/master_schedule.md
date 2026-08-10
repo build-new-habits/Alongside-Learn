@@ -1,5 +1,5 @@
 # Alongside: Learn — Master Schedule
-## 10 Aug 2026 v7
+## 10 Aug 2026 v8
 
 Build New Habits Ltd | Single source of truth for all Learn build, business, content, and safeguarding/legal tasks. Read in full at the start of every session (file 07, Section 3). Updated at the close of every session.
 
@@ -11,52 +11,51 @@ Build New Habits Ltd | Single source of truth for all Learn build, business, con
 |---|---|
 | Target date | 1 Sept 2026 |
 | Launch scope | Private beta — trusted families only |
-| Stack | Vanilla JS PWA, Supabase (Frankfurt, RLS confirmed) |
-| Mood Meter | **Built.** Real Marc Brackett word-picker, teen-adjusted set as default, adult set included. Resolves the v6 gap — Learn's detection method now matches the shared family policy's word-based mechanism instead of diverging from it. |
-| Safeguarding assessment | Unified across mood word + free text + stress in `js/safeguarding.js`. Functional, not yet reviewed. |
-| Auth | **Built.** Sign-up/login/logout via Supabase Auth, creates a `profiles` row. |
+| Infrastructure | Scaffold, schema (v3), Supabase (RLS confirmed), Mood Meter, unified safeguarding assessment, auth, **family creation + invite-code join** — all built and live. |
 | Safeguarding reviewers | Graeme (self) — ongoing. Solicitor — TBC. School DSL friend — TBC. |
 | Pricing | Deferred to pre-public-launch. |
+
+**End-to-end signup → family → check-in flow is now functionally complete.** This is the first point where a real person could plausibly sign up, create or join a family, and do a check-in with safeguarding detection active — pending the action below and the copy/mapping sign-off already flagged in v7.
 
 ---
 
 ## 1. Action needed from Graeme — right now
 
-**Run `sql/002_mood_meter.sql`** in the Supabase SQL Editor — same process as before (SQL Editor → New query → paste → Run). It replaces the old numeric `mood` column with `mood_quadrant` + `mood_word`. Safe to run any time, no live data exists yet. Sanity check included in the file's comments.
+**Run `sql/003_family_join.sql`** in the Supabase SQL Editor (after 001 and 002, which are done). Adds: family creation and invite-code join as two server-side functions, plus a missing INSERT policy on `families` that was a gap from session 1. Sanity check included in the file.
 
-Everything else from today (auth, Mood Meter code, safeguarding logic) is already live in the repo and doesn't need anything from you to deploy — it needs this one migration to actually work end-to-end.
+**How the invite code works, so you know what to expect:** when a parent creates a family, the app shows them the family's ID (a long code) to text/share with whoever's joining — co-parent or learners. There's no email-invite system this session; for a handful of trusted beta families, sharing a code directly is proportionate. Flagged if this needs to become a proper invite-link system later.
 
 ---
 
 ## 2. What's built vs. what's next
 
-**Built today (session 2):**
-- Marc Brackett Mood Meter word-picker (`js/data/mood-meter.js`), teen set default, adult set included for future parent-facing use
-- Unified safeguarding assessment (`js/safeguarding.js`) combining mood word, free text, and stress into one level, replacing the ad-hoc logic from session 1
-- Supabase Auth: sign-up, sign-in, sign-out, session check on load (`js/auth.js`), wired into `app.js` with a real (if minimal) sign-up/login form
-- `schema.md` v2 — corrected the `user`→`profiles` naming drift from session 1 and documented the new mood fields
+**Built today (session 3, continuing session 2):**
+- Family creation (`create_family` RPC) — first parent, gets a shareable code
+- Join-by-code flow (`join_family` RPC) — enforces 2-parent/5-learner caps
+- `app.js` now routes: signed out → auth form; signed in, no family → family setup; signed in with family → check-in
+- `schema.md` v3 documents both RPCs and the now-nullable `profiles.role`
 
 **Known gaps, flagged not hidden:**
-- No family creation / learner-invite flow yet — a new sign-up gets a profile with `family_id = null`. Parent dashboard and multi-learner switching depend on this.
-- Combination-flag mood words (e.g. "overwhelmed") only check the current check-in for a second signal, not recent history — file 06 allows a recent-history window; that needs a Supabase query not yet built.
-- Adult-facing safeguarding response copy not written (teen-only so far, correctly prioritised since teen is Learn's primary audience).
-- Role is hardcoded to `'learner'` on sign-up — role selection needs the family/invite flow to make sense.
+- Invite mechanism is a raw shared code, not an email/link system
+- Family-join isn't fully race-safe under simultaneous concurrent joins — fine at beta scale, needs hardening if it grows
+- No parent dashboard yet — a parent who joins a family has nowhere to see their learners' data yet, even though the RLS policies from session 1 already support it
+- Role selection during "join" trusts the person to pick correctly (learner vs parent) — no verification step
 
-**Still needs Graeme's sign-off, not a build task:** the actual wording of the fixed safeguarding response messages (Level 2/3), and the mood-word-to-safeguarding-level mapping documented in `js/safeguarding.js`'s header comment — both are functional first-pass drafts.
+**Still needs Graeme's sign-off, not a build task (carried from v7):** safeguarding response copy, mood-word-to-level mapping.
 
 ---
 
 ## 3. Beta-blocking vs public-launch-blocking
 
-**Beta-blocking:** crisis detection ✅ built (Mood Meter + free text + stress, unified), needs copy/mapping sign-off. Fixed response + resources ✅ built. RLS ✅ live. Journal Privacy Rule ✅ enforced. **Auth ✅ built** — was the last beta-blocking infrastructure gap. **Family/invite flow — now the next beta-blocking item**, since a beta family can't actually function as a family without it.
+**Beta-blocking:** crisis detection ✅, fixed response + resources ✅, RLS ✅, Journal Privacy Rule ✅, auth ✅, family creation/join ✅. **Parent dashboard is now the next beta-blocking item** — a family isn't really usable as a family until a parent can see something.
 
-**Public-launch-blocking:** formal reviewer sign-off, DPIA, ICO registration, Article 22 position, Online Safety Act position, age verification/GDPR-K, pricing/paywall.
+**Public-launch-blocking:** formal reviewer sign-off, DPIA, ICO registration, Article 22 position, Online Safety Act position, age verification/GDPR-K, pricing/paywall, invite-link system (upgrade from shared-code).
 
 ---
 
 ## 4. Build windows
 
-- **Window A** (10–18 Aug): infrastructure ✅, coach shell + check-in ✅, Mood Meter ✅, auth ✅. Remaining: family creation/invite flow, parent dashboard start, safeguarding copy sign-off.
+- **Window A** (10–18 Aug): infrastructure ✅, check-in ✅, Mood Meter ✅, auth ✅, family creation/join ✅. Remaining: parent dashboard, safeguarding copy sign-off.
 - **Window B** (19–28 Aug, holiday, phone-only): coach-voice scripts, parent coaching content, notification copy, safeguarding copy review.
 - **Window C** (29–31 Aug): wire content in, QA, re-verify crisis links, final commits, invite first beta families.
 
@@ -66,9 +65,9 @@ Everything else from today (auth, Mood Meter code, safeguarding logic) is alread
 
 | Version | Date | Change |
 |---|---|---|
-| v1–v6 | 10 Aug 2026 | See `Past MS/`. |
-| v7 | 10 Aug 2026 | Mood Meter word-picker built (resolves v6 gap), unified safeguarding assessment, Supabase Auth built, schema v2 (naming fix + mood fields). Flagged: family/invite flow is the next beta-blocking item. |
+| v1–v7 | 10 Aug 2026 | See `Past MS/`. |
+| v8 | 10 Aug 2026 | Family creation + invite-code join built (`sql/003_family_join.sql`, `js/family-setup.js`). Signup → family → check-in flow now end-to-end functional pending copy sign-off. Parent dashboard flagged as next beta-blocking item. |
 
 ---
 
-*Build New Habits Ltd · Alongside: Learn · Master Schedule · 10 Aug 2026 v7*
+*Build New Habits Ltd · Alongside: Learn · Master Schedule · 10 Aug 2026 v8*
