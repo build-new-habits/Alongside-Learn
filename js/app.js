@@ -59,6 +59,8 @@ function renderAuthForm(container) {
   const dobField = labelledInput('auth-dob', 'Date of birth', 'date');
   nameField.wrapper.style.display = 'none';
   dobField.wrapper.style.display = 'none';
+  nameField.input.required = false; // matches the toggle handler below — required only in sign-up mode
+  dobField.input.required = false;
   form.appendChild(nameField.wrapper);
   form.appendChild(dobField.wrapper);
 
@@ -86,6 +88,13 @@ function renderAuthForm(container) {
     toggleBtn.textContent = mode === 'signIn' ? 'New here? Create an account' : 'Already have an account? Sign in';
     nameField.wrapper.style.display = mode === 'signUp' ? '' : 'none';
     dobField.wrapper.style.display = mode === 'signUp' ? '' : 'none';
+    // FIXED 10 Aug 2026: hiding these fields with display:none did NOT stop
+    // the browser treating them as required, so clicking "Sign in" while
+    // they were hidden silently failed native form validation — no error
+    // shown, submit handler never even ran. Toggling `required` alongside
+    // visibility fixes it.
+    nameField.input.required = mode === 'signUp';
+    dobField.input.required = false; // date of birth was never actually required, see labelledInput()
     errorMsg.textContent = '';
   });
 
