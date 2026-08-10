@@ -1,5 +1,5 @@
 // Alongside: Learn — Data store
-// 10 Aug 2026 v7
+// 10 Aug 2026 v8
 // Schema-first discipline (file 07 §4): this file must never read/write a
 // field that isn't documented in Documents/Admin/schema.md.
 //
@@ -183,5 +183,35 @@ export async function reviewFlashcard(card, wasCorrect) {
     .from('flashcards')
     .update({ next_review_date: nextDate.toISOString().slice(0, 10) })
     .eq('card_id', card.card_id);
+  if (error) throw error;
+}
+
+// --- Revision timetable -----------------------------------------------
+// RLS: revision_timetable_learner_all (learner full CRUD on own rows) and
+// revision_timetable_parent_select (parent read-only, same family) — both
+// from sql/001, nothing new needed server-side.
+
+export async function createRevisionEntry({ learnerId, subject, scheduledAt }) {
+  const { error } = await supabase.from('revision_timetable_entries').insert({
+    learner_id: learnerId,
+    subject: subject || null,
+    scheduled_at: scheduledAt,
+    coach_generated: false,
+  });
+  if (error) throw error;
+}
+
+export async function fetchRevisionEntries(learnerId) {
+  const { data, error } = await supabase
+    .from('revision_timetable_entries')
+    .select('*')
+    .eq('learner_id', learnerId)
+    .order('scheduled_at', { ascending: true });
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteRevisionEntry(entryId) {
+  const { error } = await supabase.from('revision_timetable_entries').delete().eq('entry_id', entryId);
   if (error) throw error;
 }

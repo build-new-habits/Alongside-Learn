@@ -8,7 +8,7 @@
 // that way — do not "fix" this by loosening the RLS policy to make the
 // dashboard richer.
 
-import { fetchFamily, fetchProfiles, fetchAssignments, fetchRiskSummary } from './store.js';
+import { fetchFamily, fetchProfiles, fetchAssignments, fetchRiskSummary, fetchRevisionEntries } from './store.js';
 
 /**
  * @param {HTMLElement} container
@@ -89,6 +89,39 @@ async function renderLearnerCard(learner) {
       list.appendChild(li);
     });
     card.appendChild(list);
+  }
+
+  // Upcoming revision sessions — same visibility rule as assignments
+  // (revision_timetable_parent_select policy, sql/001)
+  let revisionEntries = [];
+  try {
+    revisionEntries = await fetchRevisionEntries(learner.user_id);
+  } catch (err) {
+    console.error('Failed to load revision timetable for', learner.user_id, err);
+  }
+
+  const revisionHeading = document.createElement('h4');
+  revisionHeading.textContent = 'Upcoming revision';
+  card.appendChild(revisionHeading);
+
+  const upcoming = revisionEntries.filter(e => new Date(e.scheduled_at) >= new Date()).slice(0, 5);
+  if (upcoming.length === 0) {
+    const empty = document.createElement('p');
+    empty.className = 'dashboard-empty';
+    empty.textContent = 'No revision sessions planned yet.';
+    card.appendChild(empty);
+  } else {
+    const revList = document.createElement('ul');
+    revList.className = 'assignment-list';
+    upcoming.forEach(entry => {
+      const li = document.createElement('li');
+      const when = new Date(entry.scheduled_at).toLocaleString('en-GB', {
+        weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+      });
+      li.innerHTML = `<strong>${escapeHtml(entry.subject || 'Revision')}</strong> — ${when}`;
+      revList.appendChild(li);
+    });
+    card.appendChild(revList);
   }
 
   return card;

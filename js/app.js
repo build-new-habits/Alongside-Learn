@@ -10,6 +10,7 @@ import { renderCheckin } from './checkin.js';
 import { renderParentDashboard } from './parent-dashboard.js';
 import { renderAssignments } from './assignments.js';
 import { renderFlashcards } from './flashcards.js';
+import { renderRevisionTimetable } from './revision-timetable.js';
 import { renderAlwaysOnResources } from './resources.js';
 import { renderFamilySetup } from './family-setup.js';
 
@@ -88,8 +89,13 @@ function renderLearnerNav(ctx) {
   flashcardsTab.className = 'nav-tab';
   flashcardsTab.textContent = 'Flashcards';
 
+  const revisionTab = document.createElement('button');
+  revisionTab.type = 'button';
+  revisionTab.className = 'nav-tab';
+  revisionTab.textContent = 'Revision';
+
   function setActive(tab) {
-    [checkinTab, workTab, flashcardsTab].forEach(t => t.setAttribute('aria-current', t === tab ? 'page' : 'false'));
+    [checkinTab, workTab, flashcardsTab, revisionTab].forEach(t => t.setAttribute('aria-current', t === tab ? 'page' : 'false'));
   }
 
   checkinTab.addEventListener('click', () => {
@@ -104,10 +110,15 @@ function renderLearnerNav(ctx) {
     setActive(flashcardsTab);
     renderFlashcards(mainContainer, ctx);
   });
+  revisionTab.addEventListener('click', () => {
+    setActive(revisionTab);
+    renderRevisionTimetable(mainContainer, ctx);
+  });
 
   navContainer.appendChild(checkinTab);
   navContainer.appendChild(workTab);
   navContainer.appendChild(flashcardsTab);
+  navContainer.appendChild(revisionTab);
 
   setActive(checkinTab);
   renderCheckin(mainContainer, ctx);
