@@ -12,7 +12,7 @@
 // on first real sign-in, since a session doesn't exist yet if email
 // confirmation is required — there's nowhere to write the join immediately.
 
-import { supabase } from './store.js';
+import { supabase, SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './store.js';
 
 /**
  * @param {{ email: string, password: string, name: string, dateOfBirth: string,
@@ -22,6 +22,17 @@ import { supabase } from './store.js';
  * (creating a new family, or joining one, at that point instead).
  */
 export async function signUp({ email, password, name, dateOfBirth, familyCode, joinRole }) {
+  // Fire-and-forget, 10 Aug 2026: notifies the real account holder if this
+  // email is already registered, without telling the person on screen
+  // anything different — see supabase/functions/notify-existing-account for
+  // why this is the secure way to do it. Never awaited, never lets an error
+  // here affect the actual sign-up flow.
+  fetch(`${SUPABASE_URL}/functions/v1/notify-existing-account`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}` },
+    body: JSON.stringify({ email }),
+  }).catch(() => {});
+
   const { data: authData, error: authError } = await supabase.auth.signUp({
     email,
     password,

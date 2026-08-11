@@ -13,6 +13,7 @@ const SUPABASE_URL = 'https://jbajchcwnbqughesaepc.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_z1NROY5jf7O_i-jJzgF3DQ_8ggpTe5N';
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+export { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY }; // needed by auth.js to call Edge Functions directly
 
 /**
  * Writes a learner check-in row. Free-tier fields always sent; stress/free_text
