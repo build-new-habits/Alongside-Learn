@@ -123,6 +123,39 @@
 }
 .resource-list li:last-child { border-bottom: none; }
 
+/* Resource tap targets — added 11 Aug 2026 (copy review item 2).
+   min-height 44px comfortably clears WCAG 2.2 AA SC 2.5.8 Target Size
+   (Minimum, 24x24) and matches the platform touch-target convention.
+   Spacing between actions keeps adjacent targets from being mis-tapped by
+   someone distressed or in a hurry. */
+.resource-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+.resource-action {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  color: var(--color-primary);
+  background: var(--color-surface);
+  font-size: var(--font-size-body-sm);
+  font-weight: 600;
+  text-decoration: none;
+}
+.resource-action:hover {
+  border-color: var(--color-primary);
+}
+/* Visible, non-obscured focus indicator — SC 2.4.11 / 2.4.13 */
+.resource-action:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
 .checkin-error {
   color: var(--color-error);
   font-size: var(--font-size-body-sm);

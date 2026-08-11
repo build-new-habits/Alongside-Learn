@@ -159,11 +159,19 @@ async function finishCheckin(chatLog, ctx, state) {
     chatLog.appendChild(warning);
   }
 
-  // Reflection close, every time — not just when flagged (Graeme's direction
-  // 10 Aug 2026: keep support resources visible as a normal part of finishing
-  // a check-in, not something that only appears when something's wrong).
-  appendCoachBubble(chatLog, "Before you go — these are always here if you ever want to talk to someone:");
-  renderAlwaysOnResources(chatLog);
+  // Reflection close — not just when flagged (Graeme's direction 10 Aug 2026:
+  // keep support resources visible as a normal part of finishing a check-in,
+  // not something that only appears when something's wrong).
+  //
+  // EXCEPT at level 3 (copy review item 4, Graeme approved 11 Aug 2026). The
+  // crisis response already lists four resources, three of which repeat here,
+  // and a light "before you go" immediately after a crisis disclosure reads as
+  // the app moving on. The every-time rule was written before the crisis path
+  // existed; this is the one place it works against itself.
+  if (level < 3) {
+    appendCoachBubble(chatLog, "Before you go — these are always here if you ever want to talk to someone:");
+    renderAlwaysOnResources(chatLog);
+  }
 }
 
 // --- Chat-bubble UI primitives ---------------------------------------------
