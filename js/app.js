@@ -171,6 +171,13 @@ function renderAuthForm(container) {
   // confirming/signing in).
   const familyCodeField = labelledInput('auth-family-code', 'Family code (optional — leave blank if starting a new family)', 'text');
   familyCodeField.wrapper.style.display = 'none';
+  // FIXED 10 Aug 2026: labelledInput() defaults every non-date field to
+  // required — never explicitly overridden here, so the browser silently
+  // blocked submission whenever this was left blank, which is exactly the
+  // valid case for someone starting a new family. Same bug class as the
+  // earlier hidden-required-field issue: visibility and required need to be
+  // set together, every time, not assumed.
+  familyCodeField.input.required = false;
   form.appendChild(familyCodeField.wrapper);
 
   const joinRoleWrapper = document.createElement('div');
