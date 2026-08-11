@@ -1,5 +1,5 @@
 # Alongside: Learn — Master Schedule
-## 10 Aug 2026 v17
+## 10 Aug 2026 v18
 
 Build New Habits Ltd | Single source of truth for all Learn build, business, content, and safeguarding/legal tasks. Read in full at the start of every session (file 07, Section 3). Updated at the close of every session.
 
@@ -11,29 +11,28 @@ Build New Habits Ltd | Single source of truth for all Learn build, business, con
 |---|---|
 | Target date | 1 Sept 2026 |
 | Launch scope | Private beta — trusted families only |
-| **Confirmation link 404 — actually fixed** | Corrected v16's diagnosis: Graeme confirmed the failing link was a genuinely fresh sign-up at 11:10am, not a stale email. Real cause: `signUp()`/`resend()` weren't explicitly setting where the confirmation link should redirect to, so the client library's default silently dropped the `/Alongside-Learn/` path. Fixed by explicitly setting it on every call. |
+| **Family code field bug — fixed** | The optional family-code field on sign-up was silently blocking submission when left blank (the valid case for starting a new family) — `labelledInput()` defaults to required, and this was the one field that never got explicitly overridden. |
+| **Resend confirmation email — unresolved, likely rate-limited** | Graeme reports no email arrives on resend. Leading theory: Supabase's built-in test email sender has a low hourly cap, and today's testing has sent a lot of confirmation/resend emails. Not yet confirmed via Supabase's own Auth logs — next step, see below. |
 | Safeguarding reviewers | Graeme (self) — ongoing. Solicitor — TBC. School DSL friend — TBC. |
 | Pricing | Deferred to pre-public-launch. |
 
 ---
 
-## 1. Correction to v16
+## 1. Pattern worth naming: hidden/optional fields and `required`
 
-v16 guessed the 404 was a stale confirmation email from earlier testing. Graeme correctly pushed back — the email was sent at 11:10am to a previously-unused address, ruling that out. Real cause found and fixed: neither `signUp()` nor `resendConfirmation()` in `js/auth.js` were explicitly telling Supabase where the confirmation link should point, so it fell back to a default that doesn't include the GitHub Pages repo subpath. Both now explicitly set it from the actual page URL at the moment of signing up — removes the whole failure class rather than patching the symptom.
-
-**Honesty note:** the exact default-resolution mechanism that was failing isn't something I could verify directly (no live access to supabase.co from here), so the diagnosis is inference from the symptom, not a confirmed root cause from testing. The fix itself doesn't depend on that being exactly right — it works either way.
+Three bugs today have been the same root shape: an HTML input's visibility was changed (hidden, or meant to be optional) without also changing its `required` state to match. This hit: the sign-in form's Name/DOB fields (v10), and now the family-code field. `labelledInput()` defaults every non-date field to `required=true`, and each new optional field needs an explicit override — easy to forget, as this session shows. Worth a quick audit of any future form fields against this specific failure mode before adding new ones.
 
 ---
 
-## 2. What's testable now
+## 2. Next step on the email issue
 
-Sign up with a genuinely new email address → confirm → link should land on `build-new-habits.github.io/Alongside-Learn/` correctly this time, not the bare domain 404.
+Check Supabase dashboard → **Authentication** → **Logs** to see whether resend requests are actually reaching Supabase and what happens to them (rate-limited vs. genuinely not sending). If confirmed as a rate limit, the real fix is custom SMTP (Dashboard → Authentication → Emails → SMTP Settings) — a provider like Resend has a workable free tier. This needs Graeme's dashboard access and an external account, not something doable from the repo alone. Flagged as the next concrete step, not yet actioned.
 
 ---
 
-## 3. Unchanged from v16
+## 3. What's testable now
 
-All core beta-blocking build items remain complete. Beta-blocking checklist and open items are as per v15/v16.
+Sign-up form: family code field should now accept being left blank without any "please fill in this field" error, and correctly reveal the role choice once something is typed into it.
 
 ---
 
@@ -41,9 +40,9 @@ All core beta-blocking build items remain complete. Beta-blocking checklist and 
 
 | Version | Date | Change |
 |---|---|---|
-| v1–v16 | 10 Aug 2026 | See `Past MS/`. |
-| v17 | 10 Aug 2026 | Corrected v16's stale-email diagnosis after Graeme pushed back with evidence. Found and fixed the real cause: missing explicit `emailRedirectTo` on sign-up and resend, which let the client default silently drop the repo subpath from the confirmation link. |
+| v1–v17 | 10 Aug 2026 | See `Past MS/`. |
+| v18 | 10 Aug 2026 | Fixed family-code field wrongly requiring input when blank was valid. Named the recurring required/visibility bug pattern. Resend-email issue still open — Auth logs check is the next diagnostic step. |
 
 ---
 
-*Build New Habits Ltd · Alongside: Learn · Master Schedule · 10 Aug 2026 v17*
+*Build New Habits Ltd · Alongside: Learn · Master Schedule · 10 Aug 2026 v18*
