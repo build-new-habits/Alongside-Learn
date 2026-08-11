@@ -262,7 +262,14 @@ function renderAuthForm(container) {
         if (result.pendingConfirmation) {
           errorMsg.className = 'checkin-error';
           errorMsg.style.color = 'var(--color-success)';
-          errorMsg.textContent = 'Check your email to confirm your account, then sign in.';
+          // CHANGED 10 Aug 2026, per Graeme's feedback: this message shows
+          // identically whether the email is genuinely new OR already
+          // registered and confirmed — that's deliberate (Supabase avoids
+          // revealing which, to prevent account enumeration). Since it can't
+          // safely say "you already have an account," it instead makes
+          // "try signing in" an equally natural next step either way,
+          // without asserting anything that would leak which case it is.
+          errorMsg.textContent = "If that's a new email, check your inbox to confirm it. Already have an account with this email? Just sign in below instead.";
           showResendButton(form, emailField.input.value);
           return;
         }
