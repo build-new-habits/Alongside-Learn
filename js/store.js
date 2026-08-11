@@ -50,6 +50,47 @@ export async function updateSafeguardingLevel(userId, level) {
   if (error) throw error;
 }
 
+/**
+ * Records a learner-consented parent alert. Written ONLY when the learner
+ * presses the "let one of my parents know" button (copy review item 3a,
+ * Graeme approved 11 Aug 2026). Never called automatically.
+ *
+ * `consented_by_learner` is set true here, but the guarantee does not rest on
+ * this line: sql/004 restricts the learner's insert policy to consented rows
+ * and restricts the parent's select policy to consented rows, so an
+ * unconsented row is both unwritable by this client and unreadable by a
+ * parent. Application code forgetting the check cannot leak anything.
+ *
+ * The alert deliberately carries NO content — not the mood word, not the free
+ * text, not the level. A parent learns that their child chose to tell them
+ * something, and the conversation happens between the two of them.
+ */
+export async function logConsentedParentAlert(userId) {
+  const { error } = await supabase.from('notification_logs').insert({
+    user_id: userId,
+    type: 'learner_requested_parent_contact',
+    consented_by_learner: true,
+  });
+  if (error) throw error;
+}
+
+/** Consented alerts for one learner, newest first. Parent-side read. */
+export async function fetchConsentedAlerts(learnerId) {
+  const { data, error } = await supabase
+    .from('notification_logs')
+    .select('log_id, sent_at, acknowledged_at')
+    .eq('user_id', learnerId)
+    .eq('consented_by_learner', true)
+    .order('sent_at', { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function acknowledgeAlert(logId) {
+  const { error } = await supabase.rpc('acknowledge_alert', { log_id_input: logId });
+  if (error) throw error;
+}
+
 // --- Parent dashboard reads --------------------------------------------
 // All of these rely on RLS already granted in sql/001 (assignments,
 // flashcards, revision_timetable_entries: same_family + is_parent SELECT

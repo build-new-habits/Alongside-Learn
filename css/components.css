@@ -503,3 +503,25 @@
 .flashcard-review-btns button {
   flex: 1;
 }
+
+/* Consented contact request — parent dashboard, 11 Aug 2026.
+   Uses --color-primary rather than a warning colour: this is a child asking
+   to talk, not an alarm, and it should not read as one. */
+.alert-box {
+  border: 2px solid var(--color-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+  background: var(--color-white);
+}
+.alert-box h4 {
+  margin: 0 0 var(--space-2) 0;
+  color: var(--color-primary);
+  font-size: var(--font-size-body);
+}
+.alert-box p {
+  margin: 0 0 var(--space-4) 0;
+  font-size: var(--font-size-body-sm);
+  color: var(--color-mid);
+}
+.alert-box button { min-height: 44px; }

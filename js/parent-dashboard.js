@@ -8,7 +8,7 @@
 // that way — do not "fix" this by loosening the RLS policy to make the
 // dashboard richer.
 
-import { fetchFamily, fetchProfiles, fetchAssignments, fetchRiskSummary, fetchRevisionEntries } from './store.js';
+import { fetchFamily, fetchProfiles, fetchAssignments, fetchRiskSummary, fetchRevisionEntries, fetchConsentedAlerts, acknowledgeAlert } from './store.js';
 
 /**
  * @param {HTMLElement} container
@@ -53,6 +53,8 @@ async function renderLearnerCard(learner) {
   const name = document.createElement('h3');
   name.textContent = learner.name;
   card.appendChild(name);
+
+  card.appendChild(await renderAlerts(learner));
 
   // Risk summary — synthesised only, never raw scores (schema.md §2 rule 2)
   const summary = await fetchRiskSummary(learner.user_id);
@@ -139,4 +141,63 @@ function escapeHtml(str) {
   const div = document.createElement('div');
   div.textContent = str ?? '';
   return div.innerHTML;
+}
+
+/**
+ * Consented contact requests (copy review item 3a, 11 Aug 2026).
+ *
+ * Shows ONLY that the learner asked to talk — never the mood word, the free
+ * text, the safeguarding level, or what triggered it. sql/004's RLS policy
+ * means unconsented rows are not returned at all, so there is nothing here to
+ * accidentally over-share.
+ */
+async function renderAlerts(learner) {
+  const wrap = document.createElement('div');
+  wrap.className = 'alert-region';
+  wrap.setAttribute('aria-live', 'polite');
+
+  let alerts = [];
+  try {
+    alerts = await fetchConsentedAlerts(learner.user_id);
+  } catch (err) {
+    console.error('Could not load contact requests', err);
+    return wrap;
+  }
+
+  const outstanding = alerts.filter(a => !a.acknowledged_at);
+  if (outstanding.length === 0) return wrap;
+
+  const box = document.createElement('div');
+  box.className = 'alert-box';
+
+  const heading = document.createElement('h4');
+  heading.textContent = `${learner.name} asked to talk`;
+  box.appendChild(heading);
+
+  const when = new Date(outstanding[0].sent_at).toLocaleString('en-GB', {
+    weekday: 'long', hour: '2-digit', minute: '2-digit',
+  });
+  const detail = document.createElement('p');
+  detail.textContent = `Requested ${when}. They chose to let you know — Learn has not shared anything they wrote or how they were feeling. That conversation is yours to have with them.`;
+  box.appendChild(detail);
+
+  const ack = document.createElement('button');
+  ack.type = 'button';
+  ack.className = 'answer-option-btn';
+  ack.textContent = 'I have spoken with them';
+  ack.addEventListener('click', async () => {
+    ack.disabled = true;
+    try {
+      for (const a of outstanding) await acknowledgeAlert(a.log_id);
+      box.remove();
+      wrap.textContent = `Marked as spoken with ${learner.name}.`;
+    } catch (err) {
+      ack.disabled = false;
+      console.error('Acknowledge failed', err);
+    }
+  });
+  box.appendChild(ack);
+
+  wrap.appendChild(box);
+  return wrap;
 }

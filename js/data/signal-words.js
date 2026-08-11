@@ -35,11 +35,41 @@ export const SIGNAL_VOCABULARY = {
     "i'm useless", 'i cannot do anything right', "i can't do anything right",
     'everyone else is better',
   ],
+  // Crisis list expanded 11 Aug 2026 (copy review item 7a, Graeme authorised).
+  // The list previously covered indirect phrasings only and omitted the most
+  // direct statements of intent — the category most likely to appear when a
+  // young person has decided to say it plainly. Two entries were also NARROWED
+  // rather than added: bare 'disappear' and bare 'end it' were firing the
+  // strongest response the app has on everyday idiom ("I want this week to
+  // disappear", "let's end it there"). They now require the fuller phrasing.
+  // Graeme: revert either if you disagree — these are the only two judgement
+  // calls in here, everything else is an addition.
   crisisSignal: [
-    'hurt myself', 'self harm', 'self-harm', 'not here anymore', 'disappear',
-    'end it', 'cannot go on', "can't go on",
+    'hurt myself', 'hurting myself', 'self harm', 'self-harm',
+    'kill myself', 'killing myself', 'end my life', 'ending my life',
+    'take my own life', 'want to die', 'wish i was dead', 'wish i were dead',
+    'better off without me', 'no reason to live', 'nothing to live for',
+    'do not want to be alive', "don't want to be alive",
+    'not here anymore', 'want to disappear', 'just disappear', 'end it all',
+    'cannot go on', "can't go on", 'suicidal', 'suicide',
   ],
 };
+
+/**
+ * Matches a phrase on word boundaries rather than as a bare substring.
+ * Added 11 Aug 2026 (copy review item 7). Previously 'disappear' matched
+ * "disappeared" and "disappearing", and 'end it' matched "let's end it there".
+ * Firing the strongest response the app has on an idiom teaches a learner that
+ * it over-reads, after which they stop writing anything real in the box — which
+ * costs far more than the false positive saves. Pure accuracy change: nothing
+ * that genuinely matched before stops matching now.
+ * @param {string} text lowercased free text
+ * @param {string} phrase lowercased vocabulary entry
+ */
+function containsPhrase(text, phrase) {
+  const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`(^|[^a-z0-9])${escaped}([^a-z0-9]|$)`).test(text);
+}
 
 /**
  * Scans free-text against the vocabulary above.
@@ -60,7 +90,7 @@ export function scanFreeText(freeText) {
   const matched = [];
 
   for (const phrase of SIGNAL_VOCABULARY.crisisSignal) {
-    if (text.includes(phrase)) matched.push('crisisSignal');
+    if (containsPhrase(text, phrase)) matched.push('crisisSignal');
   }
   if (matched.includes('crisisSignal')) {
     return { level: 3, matchedCategories: [...new Set(matched)] };
@@ -69,7 +99,7 @@ export function scanFreeText(freeText) {
   for (const [category, phrases] of Object.entries(SIGNAL_VOCABULARY)) {
     if (category === 'crisisSignal') continue;
     for (const phrase of phrases) {
-      if (text.includes(phrase)) matched.push(category);
+      if (containsPhrase(text, phrase)) matched.push(category);
     }
   }
 

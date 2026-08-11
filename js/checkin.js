@@ -7,7 +7,7 @@
 // the Mood Meter is actually taught (RULER: energy axis, then pleasantness
 // axis, then the specific word) — not a deviation from it.
 
-import { submitCheckin, updateSafeguardingLevel } from './store.js';
+import { submitCheckin, updateSafeguardingLevel, logConsentedParentAlert } from './store.js';
 import { assessCheckin } from './safeguarding.js';
 import { MOOD_WORDS, determineQuadrant, energyToTier } from './data/mood-meter.js';
 import {
@@ -19,7 +19,10 @@ import { renderAlwaysOnResources } from './resources.js';
 
 const ENERGY_LABELS = ['Very low', 'Low', 'Okay', 'Good', 'High'];
 const SLEEP_LABELS = ['Very poor', 'Poor', 'Okay', 'Good', 'Great'];
-const STRESS_LABELS = ['Very low', 'Low', 'Manageable', 'High', 'Overwhelming'];
+// 'Overwhelming' replaced 11 Aug 2026 (Graeme): it has become everyday
+// language ("I'm finding these questions overwhelming") and no longer marks
+// the top of a distress scale. The replacement is harder to use casually.
+const STRESS_LABELS = ['Very low', 'Low', 'Manageable', 'High', 'More than I can handle'];
 
 /**
  * @param {HTMLElement} container
@@ -147,6 +150,7 @@ async function finishCheckin(chatLog, ctx, state) {
     const response = safeguardingResponses[key];
     appendCoachBubble(chatLog, response.message);
     renderAlwaysOnResources(chatLog, { heading: null, resources: response.resources });
+    offerParentContact(chatLog, ctx);
   } else {
     appendCoachBubble(chatLog, pickAcknowledgement(state));
   }
@@ -172,6 +176,42 @@ async function finishCheckin(chatLog, ctx, state) {
     appendCoachBubble(chatLog, "Before you go — these are always here if you ever want to talk to someone:");
     renderAlwaysOnResources(chatLog);
   }
+}
+
+/**
+ * The consent route (copy review item 3a, Graeme approved 11 Aug 2026).
+ *
+ * Learn does not tell a parent anything on its own. This is the only path by
+ * which a flagged check-in reaches a parent, and the learner has to press it.
+ * Declining is a real, equally-weighted option, not a dismissal — a learner
+ * who feels nudged into consenting hasn't consented.
+ *
+ * The alert carries no content. A parent sees that their child asked to talk,
+ * never what was said or what triggered it.
+ */
+function offerParentContact(chatLog, ctx) {
+  appendCoachBubble(chatLog, 'Would you like me to let one of your parents know you could use a chat? I will not tell them anything you said — only that you asked.');
+
+  appendOptions(chatLog, [
+    { label: 'Yes, please tell them', value: 'yes' },
+    { label: 'No thanks', value: 'no' },
+  ], async (value) => {
+    if (value !== 'yes') {
+      appendCoachBubble(chatLog, "That's completely fine. Nothing will be sent, and you can change your mind any time.");
+      return;
+    }
+    try {
+      await logConsentedParentAlert(ctx.userId);
+      appendCoachBubble(chatLog, "Done — they'll see that you asked to talk. Nothing about what you told me.");
+    } catch (err) {
+      console.error('Consented parent alert failed', err);
+      const warning = document.createElement('p');
+      warning.className = 'checkin-error';
+      warning.setAttribute('role', 'alert');
+      warning.textContent = "I couldn't send that just now. Please try again, or tell someone directly.";
+      chatLog.appendChild(warning);
+    }
+  });
 }
 
 // --- Chat-bubble UI primitives ---------------------------------------------
