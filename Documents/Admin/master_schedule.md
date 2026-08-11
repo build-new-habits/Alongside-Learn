@@ -1,5 +1,5 @@
 # Alongside: Learn — Master Schedule
-## 10 Aug 2026 v18
+## 10 Aug 2026 v19
 
 Build New Habits Ltd | Single source of truth for all Learn build, business, content, and safeguarding/legal tasks. Read in full at the start of every session (file 07, Section 3). Updated at the close of every session.
 
@@ -11,28 +11,34 @@ Build New Habits Ltd | Single source of truth for all Learn build, business, con
 |---|---|
 | Target date | 1 Sept 2026 |
 | Launch scope | Private beta — trusted families only |
-| **Family code field bug — fixed** | The optional family-code field on sign-up was silently blocking submission when left blank (the valid case for starting a new family) — `labelledInput()` defaults to required, and this was the one field that never got explicitly overridden. |
-| **Resend confirmation email — unresolved, likely rate-limited** | Graeme reports no email arrives on resend. Leading theory: Supabase's built-in test email sender has a low hourly cap, and today's testing has sent a lot of confirmation/resend emails. Not yet confirmed via Supabase's own Auth logs — next step, see below. |
+| **Custom SMTP set up** | Resend domain fully verified (DKIM, MX, SPF all green). Supabase SMTP wired to it. Resend-email rate-limit issue should now be resolved. |
+| **Cross-app service worker interference — found and fixed** | Significant finding, see Section 1. |
 | Safeguarding reviewers | Graeme (self) — ongoing. Solicitor — TBC. School DSL friend — TBC. |
 | Pricing | Deferred to pre-public-launch. |
 
 ---
 
-## 1. Pattern worth naming: hidden/optional fields and `required`
+## 1. Cross-app service worker interference — a real, non-obvious bug
 
-Three bugs today have been the same root shape: an HTML input's visibility was changed (hidden, or meant to be optional) without also changing its `required` state to match. This hit: the sign-in form's Name/DOB fields (v10), and now the family-code field. `labelledInput()` defaults every non-date field to `required=true`, and each new optional field needs an explicit override — easy to forget, as this session shows. Worth a quick audit of any future form fields against this specific failure mode before adding new ones.
+Graeme's console showed `sw.js:1035`, cache paths like `/alongside-app/js/views/about.js`, and `deleting old cache alongside-v222` — none of that is Learn's code. That's **Move's** actual, fully-built service worker. Move's SW appears registered with a broad `/` scope on the shared `build-new-habits.github.io` origin, and since Learn's own `sw.js` was never actually registered anywhere (a real gap — the file existed but nothing called `navigator.serviceWorker.register()`), Move's SW was the only one controlling pages under `/Alongside-Learn/` too.
+
+**Practical implication:** Learn's pages could have been served stale cached JavaScript from Move's cache, unrelated to anything wrong in Learn's actual deployed code. This is the most likely explanation for the family-code bug appearing to still exist in testing after it was already fixed — Graeme was very possibly looking at a stale cached copy.
+
+**Fixed:** `sw.js` now has real install/activate listeners (`skipWaiting` + `clients.claim`) and is registered from `index.html` with an explicit scope, so it takes precedence over Move's broader one. Deliberately no fetch/caching logic yet — it exists only to claim the correct scope; a real offline-caching strategy is a separate future decision, not bundled into this fix.
+
+**Immediate unblock given to Graeme:** DevTools → Application → Service Workers → Unregister, plus Clear site data, then hard refresh — needed once to clear whatever Move's SW had already cached in that browser.
 
 ---
 
-## 2. Next step on the email issue
+## 2. Email setup — done
 
-Check Supabase dashboard → **Authentication** → **Logs** to see whether resend requests are actually reaching Supabase and what happens to them (rate-limited vs. genuinely not sending). If confirmed as a rate limit, the real fix is custom SMTP (Dashboard → Authentication → Emails → SMTP Settings) — a provider like Resend has a workable free tier. This needs Graeme's dashboard access and an external account, not something doable from the repo alone. Flagged as the next concrete step, not yet actioned.
+Domain `buildnewhabits.co.uk` verified with Resend (DKIM/MX/SPF all confirmed). A DNS mix-up happened along the way — a Resend DKIM value was accidentally pasted into Zoho's existing SPF record — caught and corrected before saving, no lasting impact; Zoho's SPF is intact. Supabase SMTP now points at Resend rather than the built-in low-limit sender.
 
 ---
 
 ## 3. What's testable now
 
-Sign-up form: family code field should now accept being left blank without any "please fill in this field" error, and correctly reveal the role choice once something is typed into it.
+After clearing service worker/site data per Section 1, retry the sign-in that was failing. If it still fails, the actual error (not just background console noise) is what's needed next — screenshot whatever appears on-page or the first red console line after a genuine attempt.
 
 ---
 
@@ -40,9 +46,9 @@ Sign-up form: family code field should now accept being left blank without any "
 
 | Version | Date | Change |
 |---|---|---|
-| v1–v17 | 10 Aug 2026 | See `Past MS/`. |
-| v18 | 10 Aug 2026 | Fixed family-code field wrongly requiring input when blank was valid. Named the recurring required/visibility bug pattern. Resend-email issue still open — Auth logs check is the next diagnostic step. |
+| v1–v18 | 10 Aug 2026 | See `Past MS/`. |
+| v19 | 10 Aug 2026 | Diagnosed and fixed cross-app service worker interference from Move's SW controlling Learn's pages — likely explains the family-code bug appearing to persist. Resend domain verification completed; Supabase SMTP now live via Resend. |
 
 ---
 
-*Build New Habits Ltd · Alongside: Learn · Master Schedule · 10 Aug 2026 v18*
+*Build New Habits Ltd · Alongside: Learn · Master Schedule · 10 Aug 2026 v19*
