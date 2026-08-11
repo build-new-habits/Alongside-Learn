@@ -26,6 +26,14 @@ export async function signUp({ email, password, name, dateOfBirth, familyCode, j
     email,
     password,
     options: {
+      // FIXED 10 Aug 2026: without this, supabase-js defaults the
+      // confirmation link's redirect to window.location.origin, which is
+      // ONLY protocol+host — it silently drops the /Alongside-Learn/ path,
+      // even though the Supabase dashboard's Site URL is set correctly.
+      // That default is what produced the 404 (redirected to
+      // build-new-habits.github.io/ instead of .../Alongside-Learn/), on a
+      // genuinely fresh sign-up — not a stale-link issue as first suspected.
+      emailRedirectTo: `${window.location.origin}${window.location.pathname}`,
       data: {
         name,
         date_of_birth: dateOfBirth || null,
@@ -104,7 +112,13 @@ export async function signOut() {
  * they're clicked. A fresh send after the fix will use the corrected URL.
  */
 export async function resendConfirmation(email) {
-  const { error } = await supabase.auth.resend({ type: 'signup', email });
+  const { error } = await supabase.auth.resend({
+    type: 'signup',
+    email,
+    // Same fix as signUp() above — without this, the resent link would have
+    // the same wrong-redirect problem, defaulting to window.location.origin.
+    options: { emailRedirectTo: `${window.location.origin}${window.location.pathname}` },
+  });
   if (error) throw error;
 }
 
