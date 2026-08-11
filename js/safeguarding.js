@@ -13,9 +13,19 @@
 // Level mapping (a build-time decision, flagged for reviewer confirmation):
 //   3 = crisis-signal free-text phrase (unambiguous, e.g. "hurt myself")
 //   2 = a direct-flagged mood word, OR a hopelessness/withdrawal/self-critical
-//       free-text match, OR a combination-flagged signal paired with another
-//       flagged signal in the same check-in, OR stress = 5 combined with any
-//       free text at all
+//       free-text match, OR a combination-flagged signal paired with a stress
+//       score of 5 in the same check-in
+//
+// ITEM 8 RESOLVED, 11 Aug 2026. This comment block previously stated that
+// stress = 5 combined with any free text produced level 2. The code never did
+// that, and a `combineWithStress` helper written for the rule was exported but
+// never called — so a reviewer reading these comments would have signed off
+// behaviour the app did not have. Graeme's decision: keep the tighter
+// implemented behaviour and correct the documentation, on the grounds that
+// "overwhelming" has become common everyday language ("I'm finding these
+// questions overwhelming") and no longer reliably indicates distress at a 5.
+// I had recommended the opposite; the argument is sound and the code stands.
+// The dead helper has been deleted.
 //   1 = baseline, nothing flagged
 
 import { scanFreeText } from './data/signal-words.js';

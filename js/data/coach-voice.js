@@ -29,7 +29,23 @@ export const checkinAcknowledgements = {
 };
 
 // --- Safeguarding fixed responses ------------------------------------------
-// STATUS: DRAFT. Per Documents/Planning/alongside_learn_06_safeguarding_legal
+// STATUS: PARTIALLY SIGNED OFF, 11 Aug 2026. Items 1, 2, 4, 5, 6, 8 and 9 of
+// safeguarding_copy_review_11aug2026_v1.md are decided and applied. Items 3
+// (escalation model) and 7 (free-text policy) remain open. Still not reviewed
+// by the solicitor or school DSL reviewer.
+//
+// Item 9 (Graeme approved): the level 2 message previously read "struggling
+// doesn't mean failing". Level 2 fires on self-critical language among other
+// triggers, so the reply was introducing "failing" — a word the learner may
+// not have used. Countering a thought by naming it. Rewritten to avoid any
+// negative framing the learner did not bring themselves.
+//
+// Item 3a (Graeme approved): both responses now prompt the learner toward a
+// trusted adult rather than a parent specifically. Deliberate — "trusted
+// adult" is the standard safeguarding formulation precisely because the
+// family is sometimes the source of harm.
+//
+// ORIGINAL STATUS NOTE, retained: Per Documents/Planning/alongside_learn_06_safeguarding_legal
 // §6 item 2, teen-facing crisis messages need review against full PAPYRUS
 // guidance by a named youth-safeguarding credential holder before real use.
 // Graeme is the named safeguarding reviewer for Learn — this content needs
@@ -48,7 +64,7 @@ export const checkinAcknowledgements = {
 export const safeguardingResponses = {
   // Level 3 — crisis signal vocabulary matched (file 04 §3)
   teenLevel3: {
-    message: "Thank you for telling me. What you're feeling matters, and you don't have to carry it alone. Please reach out to one of these right now, or as soon as you can:",
+    message: "Thank you for telling me. What you're feeling matters, and you don't have to carry it alone. If there is an adult you trust nearby — a parent, a teacher, someone at school — please tell them too. And please reach out to one of these right now, or as soon as you can:",
     resources: [
       { name: 'Childline', detail: 'Call 0800 1111 — free, 24/7, confidential', tel: '08001111' },
       { name: 'Shout', detail: 'Text 85258 — free, 24/7 text support', sms: '85258' },
@@ -58,7 +74,7 @@ export const safeguardingResponses = {
   },
   // Level 2 — hopelessness/withdrawal/self-critical vocabulary or high stress
   teenLevel2: {
-    message: "That sounds really hard. I want you to know that struggling doesn't mean failing — you showed up and told me, and that matters. If it would help to talk to someone, these are always here:",
+    message: "That sounds really hard. Struggling is real, and showing up and telling me is what matters. Is there an adult you trust — a parent, a teacher, someone at school — you could tell as well? These are always here too:",
     resources: [
       { name: 'Childline', detail: 'Call 0800 1111 or chat online — free, 24/7', tel: '08001111', url: 'https://www.childline.org.uk' },
       { name: 'Shout', detail: 'Text 85258 — free, 24/7 text support', sms: '85258' },

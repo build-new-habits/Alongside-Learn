@@ -8,17 +8,16 @@
 // checkin.free_text field. Never wire this into any future journal/reflection
 // feature without an explicit, documented decision from Graeme.
 //
-// FLAGGED GAP (surfaced during build, 10 Aug 2026): file 06's crisis policy
-// describes detection via a Yale Mood Meter word-picker (quadrant system with
-// a combination rule for words like "overwhelmed"/"trapped"). Learn's actual
-// check-in structure (file 04 §2) has no word-picker — mood/energy/sleep/stress
-// are 5-point tap-row scales, and free text is the only word-based input.
-// This file implements ONLY the free-text vocabulary match, which is the part
-// that actually maps onto Learn's real UI. The mood-meter quadrant/combination
-// system in file 06 is not implemented here because there is no corresponding
-// input to apply it to. Flagged in master_schedule.md — needs Graeme's and the
-// eventual safeguarding reviewer's attention: either add a word-picker input to
-// match the shared policy, or formally adapt the policy for Learn's actual UI.
+// RESOLVED 11 Aug 2026 (defect D6). This file previously carried a prominent
+// "FLAGGED GAP" note stating that Learn had no Mood Meter word-picker and that
+// only free-text matching was therefore implemented. That was true when written
+// and became wrong the same day: the word-picker was built (js/data/mood-meter.js)
+// and js/safeguarding.js now combines both signals. The stale note was actively
+// misleading anyone reading this file cold — removed.
+//
+// Also removed 11 Aug 2026: a `combineWithStress` helper that was exported but
+// never called anywhere. Stress handling lives in js/safeguarding.js. See item 8
+// of safeguarding_copy_review_11aug2026_v1.md.
 
 export const SIGNAL_VOCABULARY = {
   hopelessness: [
@@ -79,18 +78,4 @@ export function scanFreeText(freeText) {
   }
 
   return { level: 1, matchedCategories: [] };
-}
-
-/**
- * Stress score alone can also elevate safeguarding level when combined with
- * any free text at all, even non-matching text — a build-time default, NOT
- * a clinical rule. Flag for safeguarding reviewer sign-off before beta.
- * "Overwhelming" = 5 on the stress scale (file 04 §2).
- */
-export function combineWithStress(scanResult, stressScore) {
-  if (scanResult.level === 3) return scanResult; // crisis always wins
-  if (stressScore === 5 && scanResult.level < 2) {
-    return { level: 2, matchedCategories: [...scanResult.matchedCategories, 'highStressScore'] };
-  }
-  return scanResult;
 }

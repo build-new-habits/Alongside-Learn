@@ -18,6 +18,28 @@
 //   direct       -> triggers the fixed safeguarding response on its own
 //   combination  -> only triggers when paired with a second flagged signal
 //                   in the same check-in (file 06 "combination rule")
+//
+// REVIEW DECISIONS, 11 Aug 2026 (safeguarding_copy_review_11aug2026_v1.md):
+//
+// Item 5 — "trapped" is now a DIRECT flag in every quadrant it appears in,
+// teen and adult. It was previously direct in red and combination in blue,
+// meaning a learner feeling trapped on a low-energy day usually got no
+// response at all. The Mood Meter cannot adjudicate this: it is an emotional
+// granularity instrument, not a risk-stratification tool, and carries no view
+// on which words indicate danger. The suicide-prevention literature does —
+// entrapment is a central construct in O'Connor's Integrated Motivational-
+// Volitional model, where defeat and entrapment drive the emergence of
+// suicidal ideation, and the entrapment it describes is paired with defeat:
+// a flattened, depleted state, i.e. exactly the blue quadrant we were
+// flagging weakest. Rather than pick a quadrant on thin evidence, the word
+// now flags directly wherever it appears. Graeme approved 11 Aug 2026.
+//
+// Item 6 — teen and adult sets diverge deliberately, not by oversight:
+// "numb" flags directly for teens but not adults, because dissociation and
+// flat affect present differently in adolescence and warrant a lower trigger
+// threshold; "despair" and "panicked" are omitted from the teen set as less
+// commonly self-selected vocabulary in that age band. Graeme confirmed
+// 11 Aug 2026. Do not "tidy" these into alignment.
 
 export const MOOD_WORDS = {
   teen: {
@@ -39,7 +61,7 @@ export const MOOD_WORDS = {
       { word: 'tired', flag: 'none' }, { word: 'fed up', flag: 'none' },
       { word: 'empty', flag: 'direct' }, { word: 'hopeless', flag: 'direct' },
       { word: 'worthless', flag: 'direct' }, { word: 'numb', flag: 'direct' },
-      { word: 'trapped', flag: 'combination' },
+      { word: 'trapped', flag: 'direct' },
     ]},
   },
   adult: {
@@ -71,7 +93,7 @@ export const MOOD_WORDS = {
       { word: 'despair', flag: 'direct' }, { word: 'hopeless', flag: 'direct' },
       { word: 'worthless', flag: 'direct' }, { word: 'empty', flag: 'direct' },
       { word: 'numb', flag: 'none' }, { word: 'drained', flag: 'none' },
-      { word: 'trapped', flag: 'combination' },
+      { word: 'trapped', flag: 'direct' },
     ]},
   },
 };
