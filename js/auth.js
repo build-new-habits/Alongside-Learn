@@ -1,32 +1,38 @@
 // Alongside: Learn — Auth
-// 10 Aug 2026 v1
+// 10 Aug 2026 v2
 // Email/password sign-up and login via Supabase Auth, plus the matching
-// `profiles` row (schema.md §1). Family creation and learner-invite flow are
-// NOT built this session — flagged, not hidden. A sign-up here creates a
-// profile with family_id = null; family assignment is next-session work.
+// `profiles` row (schema.md §1).
+//
+// CHANGED 10 Aug 2026: sign-up now accepts an optional family code + role
+// directly, per Graeme's feedback — previously joining a family was a
+// separate step after account creation (create account -> confirm email ->
+// sign in -> navigate to family setup -> join), which is one step too many.
+// The code/role are stashed in the auth user's metadata at sign-up time
+// (same pattern as name/DOB) and consumed automatically by ensureProfile()
+// on first real sign-in, since a session doesn't exist yet if email
+// confirmation is required — there's nowhere to write the join immediately.
 
 import { supabase } from './store.js';
 
 /**
- * @param {{ email: string, password: string, name: string, dateOfBirth: string }} input
- * Role is intentionally not set here — it's determined by whichever of
- * createFamily() (role becomes 'parent') or joinFamily() (role passed in)
- * the person completes next, in the family-setup step.
- *
- * FIXED 10 Aug 2026: this project requires email confirmation, so signUp()
- * returns a user object but NO session until the email is confirmed. The
- * original code checked `!userId` to decide whether to defer profile
- * creation — userId is basically always present, so it tried to insert the
- * profile immediately with no active session, and RLS correctly rejected it
- * (auth.uid() is null with no session). Now checks the actual session, and
- * stashes name/DOB in the auth user's metadata so ensureProfile() can create
- * the profile row on first real sign-in instead.
+ * @param {{ email: string, password: string, name: string, dateOfBirth: string,
+ *   familyCode?: string, joinRole?: 'parent'|'learner' }} input
+ * If familyCode is omitted, behaviour is unchanged — profile is created with
+ * no family, and the person goes through family-setup.js afterwards
+ * (creating a new family, or joining one, at that point instead).
  */
-export async function signUp({ email, password, name, dateOfBirth }) {
+export async function signUp({ email, password, name, dateOfBirth, familyCode, joinRole }) {
   const { data: authData, error: authError } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { name, date_of_birth: dateOfBirth || null } },
+    options: {
+      data: {
+        name,
+        date_of_birth: dateOfBirth || null,
+        pending_family_code: familyCode || null,
+        pending_join_role: joinRole || null,
+      },
+    },
   });
   if (authError) throw authError;
 
@@ -43,7 +49,8 @@ export async function signUp({ email, password, name, dateOfBirth }) {
  * sign-up (session available immediately) and the email-confirmation case
  * (profile wasn't created at sign-up time, created here on first real sign-in
  * instead). Reads name/date_of_birth from auth user_metadata, set during
- * signUp() above.
+ * signUp() above. If a family code was supplied at sign-up, joins it here too
+ * — the one place guaranteed to run exactly once, on first real session.
  */
 export async function ensureProfile(user) {
   const { data: existing } = await supabase
@@ -62,6 +69,20 @@ export async function ensureProfile(user) {
     coach_voice: 'nurturing',
   });
   if (error) throw error;
+
+  // Auto-join a family if a code was supplied at sign-up time. Failure here
+  // is deliberately non-fatal — the person still has a working account and
+  // can join manually via family-setup.js if the code was wrong or the
+  // family filled up between sign-up and confirmation.
+  const pendingCode = user.user_metadata?.pending_family_code;
+  const pendingRole = user.user_metadata?.pending_join_role;
+  if (pendingCode && pendingRole) {
+    try {
+      await joinFamily(pendingCode, pendingRole);
+    } catch (joinErr) {
+      console.error('Auto-join from sign-up failed, falling back to manual family setup:', joinErr);
+    }
+  }
 }
 
 export async function signIn({ email, password }) {

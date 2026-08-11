@@ -164,6 +164,43 @@ function renderAuthForm(container) {
   form.appendChild(nameField.wrapper);
   form.appendChild(dobField.wrapper);
 
+  // ADDED 10 Aug 2026, per Graeme's feedback: joining a family used to be a
+  // separate step after account creation. Now it can happen at sign-up time
+  // in one go, if the person already has a code. Genuinely optional —
+  // leaving it blank behaves exactly as before (family-setup screen after
+  // confirming/signing in).
+  const familyCodeField = labelledInput('auth-family-code', 'Family code (optional — leave blank if starting a new family)', 'text');
+  familyCodeField.wrapper.style.display = 'none';
+  form.appendChild(familyCodeField.wrapper);
+
+  const joinRoleWrapper = document.createElement('div');
+  joinRoleWrapper.className = 'field';
+  joinRoleWrapper.style.display = 'none';
+  const joinRoleLegend = document.createElement('p');
+  joinRoleLegend.textContent = 'Joining as';
+  joinRoleWrapper.appendChild(joinRoleLegend);
+  let joinRole = 'learner';
+  ['learner', 'parent'].forEach(r => {
+    const label = document.createElement('label');
+    label.className = 'radio-inline';
+    const input = document.createElement('input');
+    input.type = 'radio';
+    input.name = 'auth-join-role';
+    input.value = r;
+    input.checked = r === 'learner';
+    input.addEventListener('change', () => (joinRole = r));
+    label.appendChild(input);
+    label.append(` ${r === 'learner' ? 'A learner (student)' : 'A parent'}`);
+    joinRoleWrapper.appendChild(label);
+  });
+  form.appendChild(joinRoleWrapper);
+
+  // Show/hide the role choice based on whether a code has been typed —
+  // it's only relevant when actually joining an existing family.
+  familyCodeField.input.addEventListener('input', () => {
+    joinRoleWrapper.style.display = familyCodeField.input.value.trim() ? '' : 'none';
+  });
+
   const errorMsg = document.createElement('p');
   errorMsg.className = 'checkin-error';
   errorMsg.setAttribute('role', 'alert');
@@ -188,6 +225,8 @@ function renderAuthForm(container) {
     toggleBtn.textContent = mode === 'signIn' ? 'New here? Create an account' : 'Already have an account? Sign in';
     nameField.wrapper.style.display = mode === 'signUp' ? '' : 'none';
     dobField.wrapper.style.display = mode === 'signUp' ? '' : 'none';
+    familyCodeField.wrapper.style.display = mode === 'signUp' ? '' : 'none';
+    if (mode !== 'signUp') joinRoleWrapper.style.display = 'none';
     // FIXED 10 Aug 2026: hiding these fields with display:none did NOT stop
     // the browser treating them as required, so clicking "Sign in" while
     // they were hidden silently failed native form validation — no error
@@ -210,6 +249,8 @@ function renderAuthForm(container) {
           password: passwordField.input.value,
           name: nameField.input.value,
           dateOfBirth: dobField.input.value,
+          familyCode: familyCodeField.input.value.trim() || undefined,
+          joinRole: familyCodeField.input.value.trim() ? joinRole : undefined,
         });
         if (result.pendingConfirmation) {
           errorMsg.className = 'checkin-error';
