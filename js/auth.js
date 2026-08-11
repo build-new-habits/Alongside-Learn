@@ -27,7 +27,12 @@ export async function signUp({ email, password, name, dateOfBirth, familyCode, j
   // anything different — see supabase/functions/notify-existing-account for
   // why this is the secure way to do it. Never awaited, never lets an error
   // here affect the actual sign-up flow.
-  fetch(`${SUPABASE_URL}/functions/v1/notify-existing-account`, {
+  // NOTE: the Edge Function is named "notify-existing-account" in the
+  // Supabase dashboard, but its actual URL slug ended up as "quick-handler"
+  // (a dashboard quirk — display name and URL slug aren't always the same
+  // field). Pointing at the real deployed URL rather than making Graeme
+  // recreate the function a third time to match.
+  fetch(`${SUPABASE_URL}/functions/v1/quick-handler`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}` },
     body: JSON.stringify({ email }),
