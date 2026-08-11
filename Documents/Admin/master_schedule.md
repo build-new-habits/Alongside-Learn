@@ -1,5 +1,5 @@
 # Alongside: Learn — Master Schedule
-## 10 Aug 2026 v15
+## 10 Aug 2026 v16
 
 Build New Habits Ltd | Single source of truth for all Learn build, business, content, and safeguarding/legal tasks. Read in full at the start of every session (file 07, Section 3). Updated at the close of every session.
 
@@ -11,35 +11,29 @@ Build New Habits Ltd | Single source of truth for all Learn build, business, con
 |---|---|
 | Target date | 1 Sept 2026 |
 | Launch scope | Private beta — trusted families only |
-| **Revision timetable** | **Built.** Add/remove sessions (subject + date/time), fourth nav tab. Parent dashboard now shows each learner's next 5 upcoming sessions too. |
+| **Join-at-sign-up** | **Built.** A family code + role can now be entered directly on the sign-up form — joining is one step instead of four (create account → confirm → sign in → separately find family setup → join). |
 | Safeguarding reviewers | Graeme (self) — ongoing. Solicitor — TBC. School DSL friend — TBC. |
 | Pricing | Deferred to pre-public-launch. |
 
 ---
 
-## 1. What's testable now
+## 1. What happened, and the fix
 
-Learner: **Revision** tab → add a session with a subject and date/time → it appears in the upcoming list, removable if added by mistake.
+Graeme correctly flagged that becoming a learner required a separate account-creation-then-join flow, and asked whether sign-up should just take a family code directly. It should, and now does — an optional "Family code" field appears on sign-up; entering one reveals a role choice (learner/parent), and joining happens automatically the moment the account is confirmed and first signed into. Leaving it blank behaves exactly as before (family-setup screen afterwards). `family-setup.js` is unchanged and still handles the no-code and create-new-family cases.
 
-Parent: dashboard now shows a third section per learner — upcoming revision sessions alongside assignments and the risk summary. Same visibility rule as assignments (read-only, same family).
+**Separately diagnosed:** the 404 Graeme hit was very likely an old confirmation email (sent before the Site URL fix earlier today) being clicked instead of a fresh one — not a new bug. Worth deleting stale "Confirm your email" emails from testing today so only the latest is ever clicked by mistake.
 
 ---
 
-## 2. Where the build stands — full picture
+## 2. What's testable now
 
-The learner side now has four real tools: check-in (with safeguarding detection), assignments, flashcards, revision timetable — all writing to real data, all visible to a parent where appropriate, all respecting the RLS boundaries set up on day one (parent never sees raw check-in content, only what's meant to be shared).
-
-**Everything currently in the app is learner-entered.** No feature yet has the coach actually generating or suggesting content (`coach_suggested` / `coach_generated` flags exist in the schema for this, unused so far) — that's the natural next layer once the basic tools are solid.
+Sign up with a fresh email → family code field appears → paste a valid family code → choose learner or parent → confirm email (using the newest email only) → sign in → should land directly on the right screen (check-in for learner, dashboard for parent) with no separate join step needed.
 
 ---
 
 ## 3. Beta-blocking vs public-launch-blocking
 
-**Beta-blocking:** crisis detection ✅, fixed response + resources ✅, RLS ✅, Journal Privacy Rule ✅, auth ✅, family creation/join ✅, parent dashboard ✅, role-based routing ✅, learner assignments ✅, flashcards ✅, **revision timetable ✅**.
-
-All core beta-blocking build items are now done. What's left before beta is no longer "build the app" — it's the safeguarding copy sign-off (flagged since v7/v9), the reviewer roles (Graeme + solicitor + DSL friend, all still to formally engage), and real device/family testing.
-
-**Public-launch-blocking (unchanged):** formal reviewer sign-off, DPIA, ICO registration, Article 22 position, Online Safety Act position, age verification/GDPR-K, pricing/paywall, invite-link system, possibly custom SMTP.
+Unchanged from v15 — all core beta-blocking build items remain complete. This was a genuine UX fix, not a new feature category.
 
 ---
 
@@ -47,9 +41,9 @@ All core beta-blocking build items are now done. What's left before beta is no l
 
 | Version | Date | Change |
 |---|---|---|
-| v1–v14 | 10 Aug 2026 | See `Past MS/`. |
-| v15 | 10 Aug 2026 | Revision timetable built, parent dashboard extended to show it. All core beta-blocking build items now complete — remaining beta gate is sign-off and testing, not building. |
+| v1–v15 | 10 Aug 2026 | See `Past MS/`. |
+| v16 | 10 Aug 2026 | Family code + role join built directly into sign-up, removing a separate post-signup step. Diagnosed a 404 as a stale confirmation email, not a new bug. |
 
 ---
 
-*Build New Habits Ltd · Alongside: Learn · Master Schedule · 10 Aug 2026 v15*
+*Build New Habits Ltd · Alongside: Learn · Master Schedule · 10 Aug 2026 v16*
