@@ -23,5 +23,14 @@
     <div id="checkin-root" aria-live="polite"></div>
   </main>
   <script type="module" src="js/app.js"></script>
+  <script>
+    // Explicit scope so Learn's service worker takes precedence over any
+    // broader-scoped one on the same origin (see sw.js comments, 10 Aug 2026).
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js', { scope: './' }).catch(err => {
+        console.error('Service worker registration failed:', err);
+      });
+    }
+  </script>
 </body>
 </html>
