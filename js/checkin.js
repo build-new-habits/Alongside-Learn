@@ -1,11 +1,20 @@
 // Alongside: Learn — Coach shell + learner daily check-in
-// 10 Aug 2026 v3
+// 17 Aug 2026 v4
 // Reworked to a conversational, message-by-message flow per Graeme's
 // direction: feels like a chat rather than a form, and the mood word list is
 // "unlocked" by two simple questions (energy, then good/hard) rather than
 // showing all four Mood Meter quadrants at once. This is also closer to how
 // the Mood Meter is actually taught (RULER: energy axis, then pleasantness
 // axis, then the specific word) — not a deviation from it.
+//
+// ACCESSIBILITY, 17 Aug 2026 (defect D2, SC 4.1.3). This flow previously had
+// three overlapping live regions — #checkin-root, .chat-log, and role="status"
+// on every coach bubble — so a screen reader announced each new message two or
+// three times. All three are removed. The flow now manages focus instead: each
+// new coach message is programmatically focusable and receives focus when it
+// arrives, which announces it exactly once and, unlike a live region, leaves
+// the user's position in the conversation intact rather than dropping focus to
+// <body> every time they answer something (SC 2.4.3).
 
 import { submitCheckin, updateSafeguardingLevel, logConsentedParentAlert } from './store.js';
 import { assessCheckin } from './safeguarding.js';
@@ -32,7 +41,6 @@ export function renderCheckin(container, ctx) {
   container.innerHTML = '';
   const chatLog = document.createElement('div');
   chatLog.className = 'chat-log';
-  chatLog.setAttribute('aria-live', 'polite');
   container.appendChild(chatLog);
 
   const state = {
@@ -45,14 +53,17 @@ export function renderCheckin(container, ctx) {
     subjectFocus: '',
   };
 
-  appendCoachBubble(chatLog, pickGreeting());
+  // No focus move on first paint — the learner has just arrived on the tab and
+  // yanking focus into the log would be disorienting. Every later message does
+  // take focus, because by then the learner has just answered something.
+  appendCoachBubble(chatLog, pickGreeting(), { takeFocus: false });
   askEnergy(chatLog, ctx, state);
 }
 
 // --- Conversation steps, one leading into the next ------------------------
 
 function askEnergy(chatLog, ctx, state) {
-  appendCoachBubble(chatLog, 'How is your energy right now?');
+  appendCoachBubble(chatLog, 'How is your energy right now?', { takeFocus: false });
   appendOptions(chatLog, ENERGY_LABELS.map((label, i) => ({ label, value: i + 1 })), (value, label) => {
     state.energy = value;
     askValence(chatLog, ctx, state);
@@ -101,16 +112,18 @@ function askStress(chatLog, ctx, state) {
 }
 
 function askFreeText(chatLog, ctx, state) {
-  appendCoachBubble(chatLog, 'Anything specific on your mind today? Totally optional.');
-  appendTextInput(chatLog, { multiline: true, maxLength: 200, skippable: true }, (value) => {
+  const question = 'Anything specific on your mind today? Totally optional.';
+  appendCoachBubble(chatLog, question);
+  appendTextInput(chatLog, { multiline: true, maxLength: 200, skippable: true, label: question }, (value) => {
     state.freeText = value;
     askSubjectFocus(chatLog, ctx, state);
   });
 }
 
 function askSubjectFocus(chatLog, ctx, state) {
-  appendCoachBubble(chatLog, 'What subject are you planning to focus on today? Optional too.');
-  appendTextInput(chatLog, { multiline: false, skippable: true }, (value) => {
+  const question = 'What subject are you planning to focus on today? Optional too.';
+  appendCoachBubble(chatLog, question);
+  appendTextInput(chatLog, { multiline: false, skippable: true, label: question }, (value) => {
     state.subjectFocus = value;
     finishCheckin(chatLog, ctx, state);
   });
@@ -146,11 +159,23 @@ async function finishCheckin(chatLog, ctx, state) {
   }
 
   if (level >= 2) {
-    const key = level === 3 ? 'teenLevel3' : 'teenLevel2';
-    const response = safeguardingResponses[key];
+    // Defect D3, 17 Aug 2026. This previously read 'teenLevel2'/'teenLevel3'
+    // unconditionally, so an adult would have been shown teen-worded crisis
+    // copy. It now looks for the band's own copy first.
+    //
+    // NOTE: adultLevel2 / adultLevel3 DO NOT EXIST in coach-voice.js yet, so
+    // adults still fall back to the teen wording today. Writing adult crisis
+    // copy is a safeguarding-sign-off task, not a code task — it is not being
+    // invented here. Latent either way: only learners reach this flow.
+    const response = safeguardingResponses[`${ctx.ageBand}Level${level}`]
+      ?? safeguardingResponses[`teenLevel${level}`];
     appendCoachBubble(chatLog, response.message);
     renderAlwaysOnResources(chatLog, { heading: null, resources: response.resources });
     offerParentContact(chatLog, ctx);
+    // Everything appended below this point deliberately does NOT take focus:
+    // focus stays on the safeguarding message so the learner starts at the top
+    // of the response and moves down through it, rather than being dropped at
+    // the end of a crisis reply they have not been shown.
   } else {
     appendCoachBubble(chatLog, pickAcknowledgement(state));
   }
@@ -173,7 +198,7 @@ async function finishCheckin(chatLog, ctx, state) {
   // the app moving on. The every-time rule was written before the crisis path
   // existed; this is the one place it works against itself.
   if (level < 3) {
-    appendCoachBubble(chatLog, "Before you go — these are always here if you ever want to talk to someone:");
+    appendCoachBubble(chatLog, "Before you go — these are always here if you ever want to talk to someone:", { takeFocus: level < 2 });
     renderAlwaysOnResources(chatLog);
   }
 }
@@ -190,7 +215,7 @@ async function finishCheckin(chatLog, ctx, state) {
  * never what was said or what triggered it.
  */
 function offerParentContact(chatLog, ctx) {
-  appendCoachBubble(chatLog, 'Would you like me to let one of your parents know you could use a chat? I will not tell them anything you said — only that you asked.');
+  appendCoachBubble(chatLog, 'Would you like me to let one of your parents know you could use a chat? I will not tell them anything you said — only that you asked.', { takeFocus: false });
 
   appendOptions(chatLog, [
     { label: 'Yes, please tell them', value: 'yes' },
@@ -216,13 +241,29 @@ function offerParentContact(chatLog, ctx) {
 
 // --- Chat-bubble UI primitives ---------------------------------------------
 
-function appendCoachBubble(chatLog, text) {
+/**
+ * base.css forces scroll-behavior: auto under prefers-reduced-motion, but that
+ * only governs CSS-initiated scrolling — a behavior: 'smooth' passed here in JS
+ * overrides it, so reduced-motion users were still getting animated scrolling
+ * on every message. Checked explicitly instead (file 01 §8: reduced motion is a
+ * hard requirement, not a nicety).
+ */
+function scrollToEnd(el) {
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  el.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'end' });
+}
+
+function appendCoachBubble(chatLog, text, { takeFocus = true } = {}) {
   const bubble = document.createElement('div');
   bubble.className = 'bubble bubble-coach';
-  bubble.setAttribute('role', 'status');
+  // tabindex="-1" makes this focusable programmatically but keeps it out of the
+  // tab order, so a keyboard user tabs straight from the message to the answer
+  // buttons below it rather than through every message in the log.
+  bubble.tabIndex = -1;
   bubble.textContent = text;
   chatLog.appendChild(bubble);
-  bubble.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  if (takeFocus) bubble.focus({ preventScroll: true });
+  scrollToEnd(bubble);
   return bubble;
 }
 
@@ -231,7 +272,7 @@ function appendUserBubble(chatLog, text) {
   bubble.className = 'bubble bubble-user';
   bubble.textContent = text;
   chatLog.appendChild(bubble);
-  bubble.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  scrollToEnd(bubble);
 }
 
 /**
@@ -258,17 +299,20 @@ function appendOptions(chatLog, options, onSelect) {
   });
 
   chatLog.appendChild(wrap);
-  wrap.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  scrollToEnd(wrap);
 }
 
-function appendTextInput(chatLog, { multiline, maxLength, skippable }, onSubmit) {
+function appendTextInput(chatLog, { multiline, maxLength, skippable, label }, onSubmit) {
   const wrap = document.createElement('div');
   wrap.className = 'answer-text-input';
 
   const input = multiline ? document.createElement('textarea') : document.createElement('input');
   if (!multiline) input.type = 'text';
   if (maxLength) input.maxLength = maxLength;
-  input.setAttribute('aria-label', 'Your answer');
+  // Named after the question actually asked rather than a generic "Your answer",
+  // so a screen reader user who tabs to this field out of context still knows
+  // what it is (SC 3.3.2).
+  input.setAttribute('aria-label', label || 'Your answer');
   wrap.appendChild(input);
 
   const btnRow = document.createElement('div');
@@ -292,8 +336,10 @@ function appendTextInput(chatLog, { multiline, maxLength, skippable }, onSubmit)
 
   wrap.appendChild(btnRow);
   chatLog.appendChild(wrap);
-  wrap.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  input.focus();
+  scrollToEnd(wrap);
+  // Deliberately NOT auto-focused. Focus is already on the coach's question, and
+  // auto-focusing here would open the mobile keyboard over that question for a
+  // field that is optional in both places it is used.
 
   function submit(value) {
     wrap.remove();

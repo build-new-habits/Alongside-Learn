@@ -161,7 +161,7 @@ These are genuinely fine to add later without breaking anything above — none o
 
 ---
 
-## 7. Family setup RPCs (v3, `sql/003_family_join.sql`)
+## 5. Family setup RPCs (v3, `sql/003_family_join.sql`)
 
 `profiles.role` is now nullable — unset until family setup completes.
 
@@ -172,4 +172,4 @@ Both are `security definer` so they can bypass the `families` table's owner-only
 
 ---
 
-*Build New Habits Ltd · Alongside: Learn · Schema · 10 Aug 2026 v2*
+*Build New Habits Ltd · Alongside: Learn · Schema · 10 Aug 2026 v3*
