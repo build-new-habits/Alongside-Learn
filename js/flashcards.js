@@ -1,23 +1,26 @@
 // Alongside: Learn — Flashcards
-// 10 Aug 2026 v1
+// 17 Aug 2026 v2
 // Add cards, review what's due today (question -> reveal answer -> mark
 // correct/incorrect), see the full deck below. Simple spaced-repetition
 // logic lives in store.js's reviewFlashcard(), not here.
 
 import { createFlashcard, fetchAllFlashcards, fetchDueFlashcards, reviewFlashcard } from './store.js';
+import { announce, focusTarget } from './a11y.js';
 
 /**
  * @param {HTMLElement} container
  * @param {{ userId: string }} ctx
  */
-export async function renderFlashcards(container, ctx) {
+export async function renderFlashcards(container, ctx, { focusAfter = null } = {}) {
   container.innerHTML = '';
 
   const heading = document.createElement('h2');
   heading.textContent = 'Flashcards';
   container.appendChild(heading);
 
-  container.appendChild(renderAddForm(ctx, () => renderFlashcards(container, ctx)));
+  const form = renderAddForm(ctx, () => renderFlashcards(container, ctx, { focusAfter: 'form' }));
+  container.appendChild(form);
+  if (focusAfter === 'form') form.querySelector('input')?.focus();
 
   let due = [];
   let all = [];
@@ -34,8 +37,14 @@ export async function renderFlashcards(container, ctx) {
   container.appendChild(reviewHeading);
 
   if (due.length > 0) {
-    container.appendChild(renderReviewCard(due[0], () => renderFlashcards(container, ctx)));
+    container.appendChild(renderReviewCard(due[0], () => renderFlashcards(container, ctx, { focusAfter: 'review' })));
   }
+  // Marking a card right or wrong rebuilds the view and the next card takes the
+  // old one's place. Without this the learner is silently returned to <body>
+  // after every single card, which makes reviewing a deck by keyboard
+  // effectively impossible. Landing on the review heading also reads out how
+  // many are left.
+  if (focusAfter === 'review') focusTarget(reviewHeading);
 
   const allHeading = document.createElement('h3');
   allHeading.textContent = 'All your cards';
@@ -98,16 +107,36 @@ function renderReviewCard(card, onReviewed) {
     answer.hidden = false;
     revealBtn.hidden = true;
     btnRow.hidden = false;
+    // Hiding the button the learner just pressed destroys their focus position,
+    // and the answer they asked for is never announced. Moving focus onto the
+    // answer does both jobs: it reads out, and the right/wrong buttons are the
+    // next things in the tab order.
+    focusTarget(answer);
   });
 
-  correctBtn.addEventListener('click', async () => {
-    await reviewFlashcard(card, true);
-    onReviewed();
-  });
-  incorrectBtn.addEventListener('click', async () => {
-    await reviewFlashcard(card, false);
-    onReviewed();
-  });
+  // Both of these previously had no error handling at all: if the review failed
+  // to save, onReviewed() never ran and the card simply sat there.
+  async function review(gotItRight) {
+    correctBtn.disabled = true;
+    incorrectBtn.disabled = true;
+    try {
+      await reviewFlashcard(card, gotItRight);
+      announce(gotItRight ? 'Marked right.' : 'Marked wrong.');
+      onReviewed();
+    } catch (err) {
+      correctBtn.disabled = false;
+      incorrectBtn.disabled = false;
+      const failed = document.createElement('p');
+      failed.className = 'checkin-error';
+      failed.setAttribute('role', 'alert');
+      failed.textContent = 'That did not save — please try again.';
+      wrap.appendChild(failed);
+      console.error(err);
+    }
+  }
+
+  correctBtn.addEventListener('click', () => review(true));
+  incorrectBtn.addEventListener('click', () => review(false));
 
   btnRow.appendChild(correctBtn);
   btnRow.appendChild(incorrectBtn);

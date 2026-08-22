@@ -1,5 +1,5 @@
 // Alongside: Learn — App entry point
-// 10 Aug 2026 v4
+// 17 Aug 2026 v5
 // Real Supabase Auth session check on load. If signed in with no family yet,
 // shows family creation/join. Once a family exists, loads the check-in
 // context (profile + family tier) and renders the check-in flow. If not
@@ -13,6 +13,7 @@ import { renderFlashcards } from './flashcards.js';
 import { renderRevisionTimetable } from './revision-timetable.js';
 import { renderAlwaysOnResources } from './resources.js';
 import { renderFamilySetup } from './family-setup.js';
+import { focusTarget } from './a11y.js';
 
 const mainContainer = document.getElementById('checkin-root');
 const resourcesContainer = document.getElementById('resources-root');
@@ -94,8 +95,14 @@ function renderLearnerNav(ctx) {
   revisionTab.className = 'nav-tab';
   revisionTab.textContent = 'Revision';
 
+  // aria-current is removed rather than set to "false" on inactive tabs. Both
+  // are technically valid, but some screen readers announce the literal token,
+  // so a learner could hear "false" read out against three of the four tabs.
   function setActive(tab) {
-    [checkinTab, workTab, flashcardsTab, revisionTab].forEach(t => t.setAttribute('aria-current', t === tab ? 'page' : 'false'));
+    [checkinTab, workTab, flashcardsTab, revisionTab].forEach(t => {
+      if (t === tab) t.setAttribute('aria-current', 'page');
+      else t.removeAttribute('aria-current');
+    });
   }
 
   checkinTab.addEventListener('click', () => {
@@ -149,14 +156,19 @@ function renderAuthForm(container) {
   const form = document.createElement('form');
   form.setAttribute('aria-label', 'Sign in or sign up');
 
-  const emailField = labelledInput('auth-email', 'Email', 'email');
-  const passwordField = labelledInput('auth-password', 'Password', 'password');
+  // SC 1.3.5 Identify Input Purpose: every field collecting the person's own
+  // information needs an autocomplete token. This is also what allows password
+  // managers to fill the form, which is the practical route to SC 3.3.8
+  // Accessible Authentication — nobody should have to memorise and retype a
+  // password to use a study app.
+  const emailField = labelledInput('auth-email', 'Email', 'email', { autocomplete: 'username' });
+  const passwordField = labelledInput('auth-password', 'Password', 'password', { autocomplete: 'current-password' });
   form.appendChild(emailField.wrapper);
   form.appendChild(passwordField.wrapper);
 
   // Sign-up-only fields, hidden in sign-in mode
-  const nameField = labelledInput('auth-name', 'Name', 'text');
-  const dobField = labelledInput('auth-dob', 'Date of birth', 'date');
+  const nameField = labelledInput('auth-name', 'Name', 'text', { autocomplete: 'name' });
+  const dobField = labelledInput('auth-dob', 'Date of birth', 'date', { autocomplete: 'bday' });
   nameField.wrapper.style.display = 'none';
   dobField.wrapper.style.display = 'none';
   nameField.input.required = false; // matches the toggle handler below — required only in sign-up mode
@@ -169,7 +181,7 @@ function renderAuthForm(container) {
   // in one go, if the person already has a code. Genuinely optional —
   // leaving it blank behaves exactly as before (family-setup screen after
   // confirming/signing in).
-  const familyCodeField = labelledInput('auth-family-code', 'Family code (optional — leave blank if starting a new family)', 'text');
+  const familyCodeField = labelledInput('auth-family-code', 'Family code (optional — leave blank if starting a new family)', 'text', { autocomplete: 'off' });
   familyCodeField.wrapper.style.display = 'none';
   // FIXED 10 Aug 2026: labelledInput() defaults every non-date field to
   // required — never explicitly overridden here, so the browser silently
@@ -180,10 +192,14 @@ function renderAuthForm(container) {
   familyCodeField.input.required = false;
   form.appendChild(familyCodeField.wrapper);
 
-  const joinRoleWrapper = document.createElement('div');
+  // Was a <div> with a <p> acting as a visual heading, which is not associated
+  // with the radios in any way a screen reader can use — the person heard two
+  // unexplained options with no idea what the question was (SC 1.3.1).
+  // fieldset/legend is the native construct for exactly this.
+  const joinRoleWrapper = document.createElement('fieldset');
   joinRoleWrapper.className = 'field';
   joinRoleWrapper.style.display = 'none';
-  const joinRoleLegend = document.createElement('p');
+  const joinRoleLegend = document.createElement('legend');
   joinRoleLegend.textContent = 'Joining as';
   joinRoleWrapper.appendChild(joinRoleLegend);
   let joinRole = 'learner';
@@ -241,7 +257,15 @@ function renderAuthForm(container) {
     // visibility fixes it.
     nameField.input.required = mode === 'signUp';
     dobField.input.required = false; // date of birth was never actually required, see labelledInput()
+    // The password field means something different in each mode, and password
+    // managers behave badly if it does not say so.
+    passwordField.input.autocomplete = mode === 'signUp' ? 'new-password' : 'current-password';
     errorMsg.textContent = '';
+    errorMsg.className = 'checkin-error';
+    // Half the form appears or disappears here. Without moving focus, a screen
+    // reader user gets no indication anything changed at all — they are still
+    // sitting on a button whose label just silently rewrote itself.
+    focusTarget(heading);
   });
 
   form.addEventListener('submit', async (e) => {
@@ -260,8 +284,9 @@ function renderAuthForm(container) {
           joinRole: familyCodeField.input.value.trim() ? joinRole : undefined,
         });
         if (result.pendingConfirmation) {
-          errorMsg.className = 'checkin-error';
-          errorMsg.style.color = 'var(--color-success)';
+          // Was .checkin-error with an inline colour override — announced as an
+          // error by anything keying off the class, and carried by colour alone.
+          errorMsg.className = 'form-success';
           // CHANGED 10 Aug 2026, per Graeme's feedback: this message shows
           // identically whether the email is genuinely new OR already
           // registered and confirmed — that's deliberate (Supabase avoids
@@ -284,7 +309,7 @@ function renderAuthForm(container) {
   container.appendChild(form);
 }
 
-function labelledInput(id, labelText, type) {
+function labelledInput(id, labelText, type, { autocomplete } = {}) {
   const wrapper = document.createElement('div');
   wrapper.className = 'field';
   const label = document.createElement('label');
@@ -293,6 +318,7 @@ function labelledInput(id, labelText, type) {
   const input = document.createElement('input');
   input.type = type;
   input.id = id;
+  if (autocomplete) input.autocomplete = autocomplete;
   input.required = type !== 'date';
   wrapper.appendChild(label);
   wrapper.appendChild(input);
@@ -315,13 +341,24 @@ function showResendButton(form, email) {
   resendError.className = 'checkin-error resend-error';
   resendError.setAttribute('role', 'alert');
 
+  // The button previously reported success by rewriting its own label. A screen
+  // reader does not reliably re-announce the label of the element already
+  // focused, so the confirmation was effectively invisible. Reported in a
+  // status region instead, and the label left alone.
+  const resendStatus = document.createElement('p');
+  resendStatus.className = 'form-success';
+  resendStatus.setAttribute('role', 'status');
+
   btn.addEventListener('click', async () => {
     btn.disabled = true;
     btn.textContent = 'Sending…';
     resendError.textContent = '';
+    resendStatus.textContent = '';
     try {
       await resendConfirmation(email);
-      btn.textContent = 'Sent — check your email (and spam/junk)';
+      btn.textContent = 'Resend confirmation email';
+      btn.disabled = false;
+      resendStatus.textContent = 'Sent — check your email, including spam and junk.';
     } catch (err) {
       btn.textContent = 'Resend confirmation email';
       btn.disabled = false;
@@ -335,6 +372,7 @@ function showResendButton(form, email) {
     }
   });
   form.appendChild(btn);
+  form.appendChild(resendStatus);
   form.appendChild(resendError);
 }
 

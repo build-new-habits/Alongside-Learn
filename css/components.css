@@ -525,3 +525,20 @@
   color: var(--color-mid);
 }
 .alert-box button { min-height: 44px; }
+
+/* Added 17 Aug 2026. The 'Joining as' group became a real fieldset/legend so
+   the radios are actually associated with their question. A fieldset carries a
+   default border, padding and margin that a div does not, so it is reset here
+   to keep it visually identical to the other .field blocks. */
+fieldset.field {
+  border: 0;
+  padding: 0;
+  margin: 0 0 var(--space-4) 0;
+  min-width: 0;
+}
+fieldset.field legend {
+  padding: 0;
+  font-size: var(--font-size-body-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-mid);
+}

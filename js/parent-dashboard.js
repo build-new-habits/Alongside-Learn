@@ -1,5 +1,5 @@
 // Alongside: Learn — Parent dashboard
-// 10 Aug 2026 v1
+// 17 Aug 2026 v2
 // First version — shows family learners, their assignments, and the
 // coach-synthesised risk summary. Deliberately does NOT show check-in
 // mood/energy/sleep detail: the `checkins` table is owner-only at the RLS
@@ -9,6 +9,7 @@
 // dashboard richer.
 
 import { fetchFamily, fetchProfiles, fetchAssignments, fetchRiskSummary, fetchRevisionEntries, fetchConsentedAlerts, acknowledgeAlert } from './store.js';
+import { focusTarget } from './a11y.js';
 
 /**
  * @param {HTMLElement} container
@@ -185,18 +186,38 @@ async function renderAlerts(learner) {
   ack.type = 'button';
   ack.className = 'answer-option-btn';
   ack.textContent = 'I have spoken with them';
+  // A family can have several learners, so several of these buttons can be on
+  // screen at once with an identical visible label. The accessible name says
+  // which child it belongs to (SC 4.1.2) — pressing the wrong one clears a
+  // request to talk from the wrong child, which matters here more than most.
+  ack.setAttribute('aria-label', `I have spoken with ${learner.name}`);
+
+  const ackError = document.createElement('p');
+  ackError.className = 'checkin-error';
+  ackError.setAttribute('role', 'alert');
+
   ack.addEventListener('click', async () => {
     ack.disabled = true;
+    ackError.textContent = '';
     try {
       for (const a of outstanding) await acknowledgeAlert(a.log_id);
       box.remove();
       wrap.textContent = `Marked as spoken with ${learner.name}.`;
+      // Removing the box destroys the button that had focus. Without this the
+      // parent is returned to <body>, at the top of a dashboard that may list
+      // several children.
+      focusTarget(wrap);
     } catch (err) {
       ack.disabled = false;
+      // Was console-only: the parent pressed the button, the request stayed on
+      // screen, and nothing explained why. On this particular feature, silence
+      // is the wrong failure mode.
+      ackError.textContent = 'That did not save — please try again.';
       console.error('Acknowledge failed', err);
     }
   });
   box.appendChild(ack);
+  box.appendChild(ackError);
 
   wrap.appendChild(box);
   return wrap;

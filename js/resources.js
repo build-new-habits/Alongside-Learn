@@ -83,7 +83,10 @@ function buildActions(resource) {
     wrap.appendChild(action(`sms:${sms}`, `Text ${name}`, `Text ${name} on ${sms}`));
   }
   if (url) {
-    const link = action(url, 'Website', `Visit the ${name} website`);
+    // Opens in a new tab so a learner mid-check-in does not lose the page they
+    // are on. Announced, because an unexpected new tab is disorienting and the
+    // back button no longer works the way people expect.
+    const link = action(url, 'Website', `Visit the ${name} website (opens in a new tab)`);
     link.rel = 'noopener noreferrer';
     link.target = '_blank';
     wrap.appendChild(link);

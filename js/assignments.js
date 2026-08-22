@@ -1,10 +1,11 @@
 // Alongside: Learn — Learner assignments view
-// 10 Aug 2026 v1
+// 17 Aug 2026 v2
 // Lets a learner add and track assignments — closes the loop with the parent
 // dashboard (built same day), which reads this table but had nothing to show
 // until learners could write to it.
 
 import { fetchAssignments, createAssignment, updateAssignmentStatus } from './store.js';
+import { announce } from './a11y.js';
 
 const STATUS_OPTIONS = ['not started', 'in progress', 'done'];
 
@@ -12,14 +13,20 @@ const STATUS_OPTIONS = ['not started', 'in progress', 'done'];
  * @param {HTMLElement} container
  * @param {{ userId: string }} ctx
  */
-export async function renderAssignments(container, ctx) {
+export async function renderAssignments(container, ctx, { focusForm = false } = {}) {
   container.innerHTML = '';
 
   const heading = document.createElement('h2');
   heading.textContent = 'My work';
   container.appendChild(heading);
 
-  container.appendChild(renderAddForm(ctx, () => renderAssignments(container, ctx)));
+  const form = renderAddForm(ctx, () => renderAssignments(container, ctx, { focusForm: true }));
+  container.appendChild(form);
+  // Adding an assignment rebuilds this whole view, which destroys the field the
+  // learner was typing in and drops focus to <body> (SC 2.4.3). Most people
+  // adding one assignment are about to add another, so put them back in the
+  // first field rather than at the top of the page.
+  if (focusForm) form.querySelector('input')?.focus();
 
   const listHeading = document.createElement('h3');
   listHeading.textContent = 'Your assignments';
@@ -44,7 +51,7 @@ export async function renderAssignments(container, ctx) {
 
   const list = document.createElement('ul');
   list.className = 'assignment-list assignment-list-interactive';
-  assignments.forEach(a => list.appendChild(renderAssignmentRow(a, () => renderAssignments(container, ctx))));
+  assignments.forEach(a => list.appendChild(renderAssignmentRow(a)));
   container.appendChild(list);
 }
 
@@ -123,7 +130,7 @@ function renderAddForm(ctx, onAdded) {
   return form;
 }
 
-function renderAssignmentRow(assignment, onChanged) {
+function renderAssignmentRow(assignment) {
   const li = document.createElement('li');
 
   const label = document.createElement('span');
@@ -135,6 +142,9 @@ function renderAssignmentRow(assignment, onChanged) {
 
   const select = document.createElement('select');
   select.setAttribute('aria-label', `Status for ${assignment.title}`);
+  const statusError = document.createElement('span');
+  statusError.className = 'checkin-error';
+  statusError.setAttribute('role', 'alert');
   STATUS_OPTIONS.forEach(status => {
     const opt = document.createElement('option');
     opt.value = status;
@@ -142,15 +152,28 @@ function renderAssignmentRow(assignment, onChanged) {
     opt.selected = assignment.status === status;
     select.appendChild(opt);
   });
+  // This used to re-render the entire list on every status change, which threw
+  // focus off the select the learner had just used and back to <body>. The row
+  // is already showing the right value, so there is nothing to redraw — the
+  // change is confirmed to screen readers instead, and focus stays put.
+  //
+  // The failure case previously only reached the console, so a learner whose
+  // change did not save was shown a status that had not actually been stored.
   select.addEventListener('change', async () => {
+    statusError.textContent = '';
+    const previous = assignment.status;
     try {
       await updateAssignmentStatus(assignment.assignment_id, select.value);
-      onChanged();
+      assignment.status = select.value;
+      announce(`${assignment.title} set to ${select.value}.`);
     } catch (err) {
+      select.value = previous;
+      statusError.textContent = 'That did not save — please try again.';
       console.error(err);
     }
   });
   li.appendChild(select);
+  li.appendChild(statusError);
 
   return li;
 }

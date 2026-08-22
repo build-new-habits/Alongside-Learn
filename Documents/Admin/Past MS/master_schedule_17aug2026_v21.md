@@ -1,5 +1,5 @@
 # Alongside: Learn — Master Schedule
-## 17 Aug 2026 v22
+## 17 Aug 2026 v21
 
 Build New Habits Ltd | Single source of truth for all Learn build, business, content, and safeguarding/legal tasks. Read in full at the start of every session (file 07, Section 3). Updated at the close of every session.
 
@@ -19,7 +19,7 @@ Standing-record format, established at v20 and continued here: sections 2–6 ar
 | External reviewers (solicitor, DSL) | **Will not be engaged before 19 Aug** (Graeme, 17 Aug). Sign-off before 1 Sept is not achievable |
 | Privacy notice / parental consent record | **Does not exist.** Drafting held pending O16 — see §3 |
 | PWA installability | **Done 17 Aug** — manifest and icon set built |
-| Accessibility | **WCAG 2.2 AA pass complete across all learner and parent views, 17 Aug.** See O7 |
+| Accessibility | Check-in flow pass done 17 Aug. Wider audit outstanding — see O7 |
 | Pricing | Deferred to pre-public-launch |
 
 **Honest read on 1 Sept.** Six of the eight Window A days planned at v20 passed without work: reviewer engagement (12 Aug), copy decisions (13 Aug), RLS testing (14 Aug) and the accessibility/PWA day (15–16 Aug) did not happen on schedule. The PWA and accessibility work has now been done in one pass on 17 Aug. The rest has not.
@@ -121,8 +121,8 @@ Priority order. "Blocking" means blocking the 1 Sept private beta.
 | O18 | Run `sql/004_consented_parent_alerts.sql` in Supabase | Graeme | Yes, if check-in ships | Written 11 Aug, never executed. The learner-pressed parent alert does not work until it is. Cannot be done from a phone |
 | O4 | Formally engage solicitor reviewer | Graeme | Yes for public launch | **Slipped past Window A.** Now a return-from-leave task |
 | O5 | Formally engage school DSL reviewer | Graeme | Yes for public launch | **Slipped past Window A.** Now a return-from-leave task |
-| O8 | RLS adversarial testing (cross-family, cross-learner reads via direct API) | **Graeme** | **Yes** | **Cannot be done by Claude at all.** The sandbox egress proxy blocks `*.supabase.co` (`host_not_allowed`, confirmed 17 Aug), so even unauthenticated probing is impossible from here. Either Graeme runs it, or `*.supabase.co` is added to the allowed-domain list. `schema.md` §2 calls this the highest-risk item in the pack |
-| O7 | Accessibility pass to WCAG 2.2 AA | Claude | Likely | **Done 17 Aug** across check-in, auth, parent dashboard, assignments, flashcards and revision timetable. Findings and fixes in §5. Remaining: no testing with a real screen reader or on a real device — this was a code-level audit |
+| O8 | RLS adversarial testing (cross-family, cross-learner reads via direct API) | Claude | **Yes** | Unauthenticated probing can be done unattended. Cross-family testing needs two real test families and has not been done. `schema.md` §2 calls this the highest-risk item in the pack |
+| O7 | Accessibility pass to WCAG 2.2 AA | Claude | Likely | Check-in flow done 17 Aug (D2, and reduced-motion scrolling). Auth, parent dashboard, assignments, flashcards and timetable not yet audited |
 | O19 | Read-back of check-in data to learner and parent views | Claude | No, but a visible product hole | Check-ins are write-only. Nothing shows a learner their own history |
 | O9 | Coach-suggested content | Claude | No | `coach_suggested` / `coach_generated` always written `false` |
 | O10 | Notifications | Claude | No | Depends on O2 |
@@ -162,7 +162,7 @@ Six of eight Window A days passed with no commits between 11 and 17 Aug. The pla
 
 **D4 — `safeguarding_level` is sticky. OPEN.** `updateSafeguardingLevel` is only called when level > 1, so a learner flagged once stays flagged in `learner_profile` permanently. It never returns to 1. *Deliberately not fixed in code: how and when a safeguarding flag decays is a policy question for the DSL, not a bug fix. Needs a decision alongside O2.*
 
-**Accessibility — verification outstanding.** The 2.2 AA audit and fixes are done at code level (see the closed list below). What has *not* happened is testing with a real screen reader, on a real device, by a real person. Target size and focus appearance are handled at token level (`--touch-target-min: 44px`, global 3px `:focus-visible` outline). Nothing here substitutes for one session with VoiceOver or TalkBack, which should happen before any learner uses the app.
+**Wider accessibility audit — OPEN (O7).** Auth, parent dashboard, assignments, flashcards and revision timetable have not been checked against 2.2 AA. Target size and focus appearance look well handled at token level (`--touch-target-min: 44px`, global 3px `:focus-visible` outline), but that is a code reading, not a test.
 
 **Snag list (low priority):** email confirmation magic link opens in a new tab rather than returning to the original.
 
@@ -173,13 +173,6 @@ Six of eight Window A days passed with no commits between 11 and 17 Aug. The pla
 - *D5 — `js/router.js` placeholder. Deleted 17 Aug; nothing referenced it.*
 - *D6 — stale "FLAGGED GAP" comment in `signal-words.js`. Fixed 11 Aug.*
 - *D7 — `schema.md` version and section numbering. Fixed 17 Aug.*
-- *Focus destroyed on every re-render (SC 2.4.3), across all four learner views and the parent dashboard. Fixed 17 Aug. Every view rebuilt its container from scratch on any change, so changing an assignment status, revealing a flashcard, removing a revision session or acknowledging a contact request dropped focus to `<body>` and returned the person to the top of the page. New shared helpers in `js/a11y.js` (one polite announcer, one focus helper); status changes and row removals no longer re-render the whole view.*
-- *No `autocomplete` on any auth field (SC 1.3.5, and the practical route to SC 3.3.8). Fixed 17 Aug — `username`, `current-password`/`new-password` switched with the mode, `name`, `bday`. Password managers could not fill the form at all before this.*
-- *"Joining as" radio group was a `div` with a `<p>` acting as a label, associated with nothing (SC 1.3.1). Now a real `fieldset`/`legend`.*
-- *Ambiguous accessible names (SC 4.1.2): every revision row had a button called only "Remove", and every learner card a button called only "I have spoken with them". Both now name what they act on.*
-- *Silent failures. Assignment status changes, flashcard reviews, revision deletions and contact-request acknowledgements all reported errors to the console only — the person saw a change that had not been saved. All four now show a visible, announced error and roll back where relevant.*
-- *`aria-current="false"` on inactive nav tabs — some screen readers read the token aloud. Attribute now removed rather than set false.*
-- *Sign-up success message was `.checkin-error` with an inline colour override, so it was styled and classed as an error while saying something had gone right.*
 
 ---
 
@@ -221,9 +214,8 @@ Unattended and safe under any option: unauthenticated RLS probing, the wider 2.2
 |---|---|---|
 | v1–v19 | 10 Aug 2026 | See `Past MS/`. |
 | v20 | 11 Aug 2026 | Full rebuild to standing-record format. Added build inventory, decisions log, open items register, risk register, defect list, dated run. New findings: no privacy notice (R1), level 3 flags alert no human (R2), rules diverged (R3), not installable (D1), nested live regions (D2), sticky safeguarding level (D4). |
-| v22 | 17 Aug 2026 | O7 closed at code level: full WCAG 2.2 AA pass across auth, parent dashboard, assignments, flashcards and revision timetable. Dominant finding was focus destruction on re-render across every view, fixed with new shared helpers in `js/a11y.js`. Also: missing `autocomplete` throughout auth (1.3.5/3.3.8), unassociated radio group (1.3.1), ambiguous button names (4.1.2), and four silent failure paths that showed the person a change that had not saved. O8 reassigned to Graeme — the sandbox cannot reach `*.supabase.co`, so RLS probing is not something Claude can do at all. Screen-reader testing on a real device remains outstanding. |
 | v21 | 17 Aug 2026 | Replan. Reviewer engagement will not happen before leave, so external sign-off before 1 Sept is not achievable — R4 realised, three scope options set out at §6 with Option 2 (study-tools-only beta) recommended, raised as blocking item O16. Six of eight Window A days lost, logged as R7. D1, D2, D3, D5, D7 closed; PWA manifest and icon set built; check-in accessibility pass done and recorded as decision D18. New open items: O17 (item 7b), O18 (`sql/004` never run), O19 (check-ins write-only). Privacy notice drafting held pending O16. |
 
 ---
 
-*Build New Habits Ltd · Alongside: Learn · Master Schedule · 17 Aug 2026 v22*
+*Build New Habits Ltd · Alongside: Learn · Master Schedule · 17 Aug 2026 v21*
